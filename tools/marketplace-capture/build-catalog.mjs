@@ -113,6 +113,10 @@ const STYLE_NAMES = new Set([
   'natural', 'fresh', 'calm', 'bubble', 'healthy', 'luminous', 'pop', 'soft', 'clear', 'clam',
 ]);
 
+// 식스샵 프로 공식 파트너가 만든 블록에 붙는 태그. 요금제와는 무관하다.
+// 품질 신호로 쓸 수 있어 따로 표시해 둔다.
+const PARTNER_TAG = '프리미어';
+
 const titleCase = (s) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 
 /** 블록 이름 끝의 (Natural), (Calm) 같은 톤 표기를 떼어낸다. */
@@ -152,6 +156,7 @@ function normalizeBlock(rec, categoryHint) {
     // 태그로 붙은 톤이 이름에서 뽑은 것보다 믿을 만하다.
     style: styleTags.length ? titleCase(styleTags[0]) : fromName.style,
     categories,
+    officialPartner: tags.includes(PARTNER_TAG),
     tags: otherTags,
     author: relationName(pick(rec, ['author', 'creator', 'maker', 'partner', 'brand'])),
     thumbnail: mediaUrl(
@@ -233,6 +238,9 @@ async function main() {
         for (const [k, v] of Object.entries(block)) {
           if (Array.isArray(v)) {
             existing[k] = [...new Set([...(existing[k] ?? []), ...v])];
+          } else if (typeof v === 'boolean') {
+            // 태그를 일부만 담은 응답이 있으므로 한 번이라도 참이면 참으로 둔다.
+            existing[k] = Boolean(existing[k]) || v;
           } else if (existing[k] == null && v != null) {
             existing[k] = v;
           }
@@ -266,7 +274,14 @@ async function main() {
       {
         source: 'marketplace.sixshop.io/api/blocks (Strapi)',
         builtAt: new Date().toISOString(),
-        counts: { blocks: all.length, categories: categories.size, byCategory, byStyle, byTag },
+        counts: {
+          blocks: all.length,
+          categories: categories.size,
+          officialPartner: all.filter((b) => b.officialPartner).length,
+          byCategory,
+          byStyle,
+          byTag,
+        },
         categories: [...categories.values()],
         blocks: all,
         // 정규화가 놓친 필드가 없는지 확인하려고 원본 레코드를 하나씩 남긴다.
@@ -286,7 +301,10 @@ async function main() {
   };
 
   console.log(`\n블록 응답 ${blockFiles}건, 카테고리 응답 ${categoryFiles}건을 읽었습니다.`);
-  console.log(`\n블록 ${all.length}개, 카테고리 ${categories.size}개\n`);
+  const partnerCount = all.filter((b) => b.officialPartner).length;
+  console.log(
+    `\n블록 ${all.length}개, 카테고리 ${categories.size}개, 공식 파트너 블록 ${partnerCount}개\n`,
+  );
 
   console.log('카테고리별:');
   for (const [k, v] of Object.entries(byCategory).sort((a, b) => b[1] - a[1])) {

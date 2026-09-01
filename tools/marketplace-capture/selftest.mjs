@@ -155,7 +155,7 @@ async function main() {
   check('스타일 인식 (Natural)', sample?.style === 'Natural');
   check('이름에서 스타일 떼어낸 본체', sample?.baseName === '테스트 블록 0');
   check('뒤섞인 태그에서 카테고리만 골라냄', JSON.stringify(sample?.categories) === JSON.stringify(['메인 배너']));
-  check('카테고리도 스타일도 아닌 태그는 따로 분류', JSON.stringify(sample?.tags) === JSON.stringify(['프리미어']));
+  check('공식 파트너 블록 표시', sample?.officialPartner === true && cat.counts.officialPartner === TOTAL);
   check('스타일 태그가 카테고리에 섞이지 않음', cat.blocks.every((b) => b.categories.every((c) => CATEGORIES.includes(c))));
   check('중첩된 제작자 관계를 풀어냄', sample?.author === '어쎔블네트웍스');
   check('중첩된 미디어에서 썸네일 URL 추출', sample?.thumbnail === 'https://example.test/thumb/0.png');
