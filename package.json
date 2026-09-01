@@ -10,7 +10,10 @@
     "catalog": "node tools/marketplace-capture/build-catalog.mjs",
     "selftest": "node tools/marketplace-capture/selftest.mjs",
     "plan": "node bin/plan.mjs",
-    "test:pipeline": "node tools/pipeline/selftest.mjs"
+    "test:pipeline": "node tools/pipeline/selftest.mjs",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
   },
   "devDependencies": {
     "playwright": "^1.49.0"
@@ -20,6 +23,10 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.122.0",
+    "@neondatabase/serverless": "^1.1.0",
+    "next": "^16.3.4",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "zod": "^4.5.4"
   }
 }

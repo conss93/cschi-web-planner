@@ -60,7 +60,7 @@ const BriefSchema = z.object({
   ),
 });
 
-async function stageBrief(model, { briefText }) {
+export async function stageBrief(model, { briefText }) {
   return model.generate({
     stage: '브리프 정리',
     role: ROLE,
@@ -93,7 +93,7 @@ function strategySchema(styles) {
   });
 }
 
-async function stageStrategy(model, { catalog, brief }) {
+export async function stageStrategy(model, { catalog, brief }) {
   return model.generate({
     stage: '전략과 톤',
     role: ROLE,
@@ -133,7 +133,7 @@ const ArchitectureSchema = z.object({
   ),
 });
 
-async function stageArchitecture(model, { brief, strategy }) {
+export async function stageArchitecture(model, { brief, strategy }) {
   return model.generate({
     stage: '사이트맵',
     role: ROLE,
@@ -168,7 +168,7 @@ const PageSchema = z.object({
   ),
 });
 
-async function stagePage(model, { catalog, brief, strategy, page, blockMenu }) {
+export async function stagePage(model, { catalog, brief, strategy, page, blockMenu }) {
   return model.generate({
     stage: `페이지 구성 · ${page.title}`,
     role: ROLE,
@@ -224,7 +224,7 @@ const AdvisorySchema = z.object({
   budgetNote: z.string(),
 });
 
-async function stageAdvisories(model, { brief, strategy, pages, blockMenu }) {
+export async function stageAdvisories(model, { brief, strategy, pages, blockMenu }) {
   const used = pages.flatMap((p) =>
     p.sections.map((s) => `${p.title}: ${s.purpose}${s.needsCustomTone ? ' (톤 커스텀 필요)' : ''}`),
   );

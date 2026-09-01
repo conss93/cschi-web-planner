@@ -10,7 +10,8 @@
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { loadCatalog, renderBlockMenu, renderStyleTable } from '../../src/catalog.mjs';
+import { loadCatalog } from '../../src/catalog-file.mjs';
+import { renderBlockMenu, renderStyleTable } from '../../src/catalog.mjs';
 import { runPipeline } from '../../src/pipeline.mjs';
 import { renderPlan } from '../../src/render.mjs';
 

@@ -9,3 +9,7 @@ out/
 .env
 .env.*
 .DS_Store
+
+# Next.js
+.next/
+.vercel/

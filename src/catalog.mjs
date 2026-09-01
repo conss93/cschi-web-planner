@@ -6,13 +6,11 @@
  * 들어가므로 프롬프트 캐시에 얹어 비용을 회수한다.
  */
 
-import fs from 'node:fs/promises';
-import path from 'node:path';
-
-const ROOT = path.resolve(import.meta.dirname, '..');
-
-export async function loadCatalog(file = path.join(ROOT, 'data', 'sixshop-blocks.json')) {
-  const raw = JSON.parse(await fs.readFile(file, 'utf8'));
+/**
+ * 이미 읽어 둔 카탈로그로 만든다.
+ * 웹에서는 파일을 읽는 대신 JSON 을 import 해 번들에 포함시킨다.
+ */
+export function buildCatalog(raw) {
   const blocks = raw.blocks.filter((b) => b.blockId && b.name);
 
   const byId = new Map(blocks.map((b) => [b.blockId, b]));

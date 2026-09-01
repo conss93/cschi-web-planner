@@ -59,11 +59,16 @@ const pageBlock = (page) => `
   </div>
   <ol class="strip">${page.sections.map(sectionRow).join('')}</ol>`;
 
-export function renderPlan(plan) {
+/**
+ * @param {object} plan
+ * @param {object} [opts]
+ * @param {boolean} [opts.standalone] 한 장짜리 파일로 쓸 때는 true.
+ *   웹 화면 안에 끼워 넣을 때는 false 로 두어 문서 제목을 중복시키지 않는다.
+ */
+export function renderPlan(plan, { standalone = true } = {}) {
   const { brief, strategy, architecture, pages, advisories, counts } = plan;
 
-  return `<title>${esc(brief.companyName)} 웹사이트 기획서</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  return `${standalone ? `<title>${esc(brief.companyName)} 웹사이트 기획서</title>\n` : ''}<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 :root{--paper:#F4F6F8;--surface:#FFF;--surface-2:#EDF1F4;--ink:#14202C;--muted:#5B6B7C;--faint:#8494A3;
 --rule:#D7DEE5;--rule-soft:#E6EBEF;--seal:#9B2C22;--seal-bg:#F6E9E6;--slate:#35566E;--slate-bg:#E4ECF2;

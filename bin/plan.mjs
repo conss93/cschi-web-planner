@@ -8,7 +8,7 @@
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { loadCatalog } from '../src/catalog.mjs';
+import { loadCatalog } from '../src/catalog-file.mjs';
 import { createModel, estimateCost } from '../src/model.mjs';
 import { runPipeline } from '../src/pipeline.mjs';
 import { renderPlan } from '../src/render.mjs';

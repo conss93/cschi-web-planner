@@ -84,7 +84,11 @@ HTML 은 브라우저로 열어 그대로 보거나 인쇄해 쓴다.
 data/sixshop-blocks.json     블록 카탈로그 230개
 data/sixshop-categories.json 카테고리·스타일 체계와 API 스키마 메모
 data/brief-form.json         상담 입력 폼 정의
-src/catalog.mjs              카탈로그 로드, 모델용 블록 목록 생성
+src/catalog.mjs              모델용 블록 목록 생성 (파일 의존 없음)
+src/catalog-file.mjs         카탈로그를 파일에서 읽기 (CLI 전용)
+lib/db.mjs                   기획서 저장소 (Neon Postgres)
+lib/runner.mjs               웹에서 한 번에 한 단계씩 실행
+app/                         웹 화면과 API
 src/model.mjs                모델 호출과 캐시 구간 배치
 src/pipeline.mjs             단계별 프롬프트와 스키마, 검증
 src/render.mjs               기획 결과를 HTML 로
@@ -100,3 +104,42 @@ docs/sample-plan-tax-firm.html  손으로 만든 기획서 샘플 (기준점)
 
 게시판·블로그 목록을 만드는 블록과 인물 소개 전용 블록은 마켓플레이스에 없다.
 전자는 식스샵 기본 게시판 기능으로, 후자는 카드 배너를 전용해 처리한다.
+
+## 웹앱
+
+CLI 와 같은 파이프라인을 브라우저에서 쓴다. 어느 컴퓨터에서든 접속할 수 있고,
+API 키가 서버에만 있어 노출될 일이 없다.
+
+```bash
+cp .env.example .env.local   # 세 값을 채운다
+npm run dev
+```
+
+| 화면 | 하는 일 |
+|---|---|
+| `/` | 만든 기획서 목록 |
+| `/new` | 상담 폼. `data/brief-form.json` 을 그대로 그린다 |
+| `/plans/<id>` | 생성 진행 상황과 완성된 기획서. 인쇄로 PDF 저장 |
+| `/share/<token>` | 고객에게 보내는 읽기 전용 링크. 로그인 불필요 |
+
+### 왜 단계마다 요청을 나눴나
+
+기획서 하나에 1분 안팎이 걸리는데 서버리스 함수는 그만큼 오래 못 버틴다.
+그래서 `/api/plans/<id>/stage` 는 **한 번에 한 단계만** 돌리고 결과를 저장한다.
+화면이 끝날 때까지 반복해 부르므로 창을 닫아도 상태가 남고, 이어서 진행된다.
+진행 표시도 이 구조에서 공짜로 나온다.
+
+### 인증
+
+사용자가 한 명이라 계정 체계를 두지 않았다. `PLANNER_PASSWORD` 하나와
+서명된 쿠키가 전부다. 고객 공유 링크는 이 인증을 거치지 않고, 대신 추측할 수
+없는 토큰을 쓴다.
+
+### Vercel 배포
+
+1. [neon.tech](https://neon.tech) 에서 Postgres 프로젝트를 만들고 연결 문자열을 복사한다.
+2. Vercel 에서 이 저장소를 import 한다.
+3. 환경변수 세 개(`ANTHROPIC_API_KEY`, `DATABASE_URL`, `PLANNER_PASSWORD`)를 넣는다.
+4. 배포한다. 테이블은 첫 요청 때 자동으로 만들어진다.
+
+**저장소를 비공개로 두어야 한다.** 기획서에 고객사 정보가 들어간다.
