@@ -62,11 +62,32 @@ out/marketplace/
 
 끝나면 터미널에 유력 후보가 크기순으로 출력된다.
 
+## 2단계: 카탈로그로 합치기
+
+수집이 끝나면 흩어진 응답들을 하나의 카탈로그로 정리한다.
+
+```bash
+npm run catalog
+```
+
+`out/marketplace/api/` 의 `/api/blocks`, `/api/block-categories` 응답을 전부 읽어
+blockId 기준으로 중복을 제거하고 `data/sixshop-blocks.json` 을 만든다.
+
+마켓플레이스는 Strapi 로 돌아가는데 버전에 따라 응답 모양이 다르므로
+(v4 는 `data[].attributes`, v5 는 평면) 양쪽을 모두 받아들이고,
+중첩된 관계 필드에서 카테고리·제작자 이름과 썸네일 URL 을 꺼낸다.
+블록 이름 끝의 `(Natural)` 같은 톤 표기는 `style` 로 분리한다.
+
+터미널에 카테고리별·스타일별 집계와 **비어있는 필드**가 출력된다.
+비어있는 필드가 있으면 결과 파일 안 `_sampleRawBlock` 에 원본 레코드가 하나 들어있으니
+그걸 보고 정규화 규칙을 고치면 된다.
+
 ## 보안
 
 - `.auth/` 에는 **로그인 쿠키와 인증 토큰이 들어있다.** `.gitignore` 에 넣어뒀지만 압축해서 전달하거나 공유 폴더에 두지 말 것.
 - `out/` 도 커밋하지 않는다. 응답에 계정 정보가 섞여 있을 수 있다.
-- 공유할 때는 `out/marketplace/api/` 안에서 **블록 목록 파일만 골라서** 보낸다. `manifest.json` 을 먼저 열어 어느 파일인지 확인하면 된다.
+- 공유할 때는 `npm run catalog` 로 만든 **`data/sixshop-blocks.json` 하나만** 보내면 된다.
+  `out/` 에는 로그인 후 받은 내 쇼핑몰 데이터도 섞여 있으므로 통째로 보내지 않는다.
 
 ## 안 될 때
 

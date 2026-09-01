@@ -25,7 +25,11 @@ const HINTS = [
   '(Natural)', '(Fresh)', '(Calm)', '(Bubble)', '(Healthy)', '(Luminous)', '(Pop)',
 ];
 
-const MIN_BODY_BYTES = 400;   // 이보다 작은 JSON 은 설정/핑 응답일 가능성이 높다
+// 주소만 봐도 마켓플레이스와 관련 있어 보이는 응답. 크기와 무관하게 남긴다.
+// 카테고리 목록은 항목이 열몇 개뿐이라 작게 오는데, 그게 꼭 필요한 데이터다.
+const URL_HINT = /block|marketplace|categor|section|template|widget/i;
+
+const MIN_BODY_BYTES = 400;   // 관련 없어 보이는 응답에만 적용하는 하한선
 const MAX_BODY_BYTES = 40 * 1024 * 1024;
 
 const manifest = [];
@@ -62,9 +66,12 @@ async function recordResponse(res) {
   }
 
   const bytes = Buffer.byteLength(body);
-  if (bytes < MIN_BODY_BYTES || bytes > MAX_BODY_BYTES) return;
+  const urlRelevant = URL_HINT.test(url);
+  if (bytes > MAX_BODY_BYTES) return;
+  if (!urlRelevant && bytes < MIN_BODY_BYTES) return;
 
   const hits = HINTS.filter((h) => body.includes(h));
+  const candidate = hits.length > 0 || urlRelevant;
   const n = String(++seq).padStart(3, '0');
   const file = `${n}__${slug(url)}.json`;
 
@@ -76,11 +83,11 @@ async function recordResponse(res) {
     method: req.method(),
     status: res.status(),
     bytes,
-    candidate: hits.length > 0,
+    candidate,
     hints: hits,
   });
 
-  const mark = hits.length ? '★' : ' ';
+  const mark = candidate ? '★' : ' ';
   console.log(`${mark} [${n}] ${(bytes / 1024).toFixed(0).padStart(5)} KB  ${url.slice(0, 110)}`);
 }
 

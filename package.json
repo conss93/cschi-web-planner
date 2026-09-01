@@ -6,6 +6,7 @@
   "description": "웹사이트 제작 기획 에이전트 (내부 도구)",
   "scripts": {
     "capture": "node tools/marketplace-capture/capture.mjs",
+    "catalog": "node tools/marketplace-capture/build-catalog.mjs",
     "selftest": "node tools/marketplace-capture/selftest.mjs"
   },
   "devDependencies": {
