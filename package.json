@@ -1,0 +1,17 @@
+{
+  "name": "cschi-web-planner",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "웹사이트 제작 기획 에이전트 (내부 도구)",
+  "scripts": {
+    "capture": "node tools/marketplace-capture/capture.mjs",
+    "selftest": "node tools/marketplace-capture/selftest.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
