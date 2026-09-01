@@ -40,7 +40,14 @@ function makeBlockPage(page) {
             { attributes: { name: CATEGORIES[n % CATEGORIES.length] } },
           ],
         },
-        author: { data: { attributes: { name: '어쎔블네트웍스' } } },
+        partner: { id: 7, userId: 42, name: '어쎔블네트웍스' },
+        summary: `블록 ${n} 은 이런 일을 합니다`,
+        // Strapi 리치텍스트. 평문으로 펴져야 한다.
+        description: [
+          { type: 'paragraph', children: [{ type: 'text', text: `첫 문단 ${n}` }] },
+          { type: 'paragraph', children: [{ type: 'text', text: '둘째 문단' }] },
+        ],
+        preview: `https://block-style10-1.sixshop.site/demo/${n}`,
         // 절반은 Strapi 미디어 관계로, 절반은 확장자 없는 CDN 주소 문자열로 준다.
         // 실제로 어느 쪽인지 모르는 채로 양쪽을 다 읽어낼 수 있어야 한다.
         ...(n % 2 === 0
@@ -159,7 +166,11 @@ async function main() {
   check('뒤섞인 태그에서 카테고리만 골라냄', JSON.stringify(sample?.categories) === JSON.stringify(['메인 배너']));
   check('공식 파트너 블록 표시', sample?.officialPartner === true && cat.counts.officialPartner === TOTAL);
   check('스타일 태그가 카테고리에 섞이지 않음', cat.blocks.every((b) => b.categories.every((c) => CATEGORIES.includes(c))));
-  check('중첩된 제작자 관계를 풀어냄', sample?.author === '어쎔블네트웍스');
+  check('제작자 이름을 꺼냄', sample?.author === '어쎔블네트웍스');
+  check('블록 설명글 확보', sample?.summary === '블록 0 은 이런 일을 합니다');
+  check('리치텍스트를 평문 문단으로 폄', sample?.description === '첫 문단 0\n둘째 문단');
+  check('데모 페이지 주소 확보', sample?.previewUrl === 'https://block-style10-1.sixshop.site/demo/0');
+  check('빈 설명글 없음', cat.blocks.every((b) => b.summary));
   check('중첩된 미디어에서 썸네일 URL 추출', sample?.thumbnail === 'https://example.test/thumb/0.png');
   check(
     '이름 모르는 필드의 확장자 없는 CDN 주소도 인식',

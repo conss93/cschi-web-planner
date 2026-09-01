@@ -31,7 +31,28 @@
     }
   ],
   "styleSuffixes": {
-    "note": "블록 이름 끝에 괄호로 붙는 톤 표기. 영상에서 관찰된 값이며 전체 목록은 아닐 수 있음.",
-    "observed": ["Natural", "Fresh", "Calm", "Bubble", "Healthy", "Luminous", "Pop"]
+    "note": "블록 이름 끝 괄호와 categories 태그에 함께 나타나는 톤 표기. 실제 수집으로 9종 확인.",
+    "observed": ["Natural", "Fresh", "Calm", "Bubble", "Healthy", "Luminous", "Pop", "Soft", "Clear"],
+    "typos": {
+      "Clam": "Calm 의 오타로 보이나 원본을 고치지 않고 그대로 둔다"
+    }
+  },
+  "otherTags": {
+    "프리미어": "식스샵 프로 공식 파트너가 제작한 블록. 요금제 제약이 아니라 품질 신호."
+  },
+  "apiSchema": {
+    "note": "marketplace.sixshop.io/api/blocks 레코드의 실제 필드. 2026-09-01 확인.",
+    "fields": {
+      "blockId": "UUID",
+      "name": "블록 이름. 끝에 (Calm) 같은 톤 표기가 붙기도 한다",
+      "categories": "카테고리·스타일·프리미어가 섞여 들어오는 태그 배열",
+      "images": "썸네일 미디어",
+      "summary": "블록이 무슨 일을 하는지 적힌 한 문단",
+      "description": "Strapi 리치텍스트 상세 설명",
+      "preview": "실제로 열리는 데모 페이지 주소",
+      "demo": "preview 와 같은 성격의 주소",
+      "partner": "제작자 정보",
+      "order": "마켓플레이스 노출 순서"
+    }
   }
 }

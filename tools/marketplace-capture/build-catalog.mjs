@@ -35,8 +35,10 @@ function extractRecords(payload) {
       : r));
 }
 
-// 이미지를 담고 있을 법한 필드 이름. 실제 이름을 모르므로 넓게 잡는다.
-const IMAGE_KEY = /thumb|image|preview|cover|media|screenshot|capture|poster/i;
+// 이미지를 담고 있을 법한 필드 이름. 실제 이름을 모르므로 넓게 잡되,
+// preview 와 demo 는 이미지가 아니라 데모 페이지 주소라서 넣지 않는다.
+// previewImage 처럼 image 가 붙은 이름은 아래 규칙에 그대로 걸린다.
+const IMAGE_KEY = /thumb|image|cover|media|screenshot|capture|poster/i;
 
 /**
  * Strapi 미디어 필드는 중첩이 깊고 버전마다 다르다. 안에서 URL 을 찾아 꺼낸다.
@@ -107,6 +109,24 @@ function relationNames(node, depth = 0, acc = []) {
 
 /** 값이 하나뿐인 관계 (제작자 등). */
 const relationName = (node) => relationNames(node)[0] ?? null;
+
+/**
+ * Strapi 리치텍스트는 [{ type, children: [{ type: 'text', text }] }] 모양이다.
+ * AI 가 읽을 수 있게 문단 단위 평문으로 편다.
+ */
+function flattenRichText(node, depth = 0) {
+  if (!node || depth > 8) return '';
+  if (typeof node === 'string') return node;
+  if (Array.isArray(node)) {
+    return node.map((n) => flattenRichText(n, depth + 1)).filter(Boolean).join('\n');
+  }
+  if (typeof node !== 'object') return '';
+  if (typeof node.text === 'string') return node.text;
+  if (Array.isArray(node.children)) {
+    return node.children.map((c) => flattenRichText(c, depth + 1)).join('');
+  }
+  return '';
+}
 
 /** 원본 필드가 어떻게 생겼는지 한 줄로 요약한다. 정규화가 놓친 필드를 찾기 위한 것. */
 function describe(value, depth = 0) {
@@ -195,10 +215,14 @@ function normalizeBlock(rec, categoryHint) {
     categories,
     officialPartner: tags.includes(PARTNER_TAG),
     tags: otherTags,
-    author: relationName(pick(rec, ['author', 'creator', 'maker', 'partner', 'brand'])),
+    author: relationName(pick(rec, ['partner', 'author', 'creator', 'maker', 'brand'])),
     thumbnail: findImage(rec),
-    previewUrl: pick(rec, ['previewUrl', 'previewURL', 'demoUrl', 'url', 'slug']),
-    description: pick(rec, ['description', 'summary', 'desc']),
+    // 실제로 열리는 데모 페이지. 블록을 눈으로 확인하거나 캡처할 때 쓴다.
+    previewUrl: pick(rec, ['preview', 'demo', 'previewUrl', 'previewURL', 'demoUrl']),
+    // 블록이 무슨 일을 하는지 적힌 글. AI 가 블록을 고를 때 가장 크게 참고한다.
+    summary: pick(rec, ['summary', 'desc']) ?? null,
+    description: flattenRichText(rec.description) || null,
+    order: pick(rec, ['order']),
   };
 }
 
@@ -346,6 +370,8 @@ async function main() {
     category: all.filter((b) => !b.categories.length).length,
     style: all.filter((b) => !b.style).length,
     author: all.filter((b) => !b.author).length,
+    summary: all.filter((b) => !b.summary).length,
+    previewUrl: all.filter((b) => !b.previewUrl).length,
   };
 
   console.log(`\n블록 응답 ${blockFiles}건, 카테고리 응답 ${categoryFiles}건을 읽었습니다.`);
