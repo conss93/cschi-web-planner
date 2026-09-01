@@ -1,0 +1,1118 @@
+<title>세무법인 웹사이트 기획서</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --paper:      #F4F6F8;
+    --surface:    #FFFFFF;
+    --surface-2:  #EDF1F4;
+    --ink:        #14202C;
+    --muted:      #5B6B7C;
+    --faint:      #8494A3;
+    --rule:       #D7DEE5;
+    --rule-soft:  #E6EBEF;
+    --seal:       #9B2C22;
+    --seal-bg:    #F6E9E6;
+    --slate:      #35566E;
+    --slate-bg:   #E4ECF2;
+    --shadow:     0 1px 2px rgba(20,32,44,.06), 0 8px 24px -16px rgba(20,32,44,.24);
+
+    --serif: "Noto Serif KR", "Nanum Myeongjo", Georgia, serif;
+    --sans:  "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+    --mono:  "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:      #11171D;
+      --surface:    #171F27;
+      --surface-2:  #1E2831;
+      --ink:        #E7ECF1;
+      --muted:      #97A6B4;
+      --faint:      #6F7F8E;
+      --rule:       #2A353F;
+      --rule-soft:  #212B34;
+      --seal:       #E2857A;
+      --seal-bg:    #33211F;
+      --slate:      #8FB2CB;
+      --slate-bg:   #1D2A34;
+      --shadow:     0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+      color-scheme: dark;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper:      #11171D;
+    --surface:    #171F27;
+    --surface-2:  #1E2831;
+    --ink:        #E7ECF1;
+    --muted:      #97A6B4;
+    --faint:      #6F7F8E;
+    --rule:       #2A353F;
+    --rule-soft:  #212B34;
+    --seal:       #E2857A;
+    --seal-bg:    #33211F;
+    --slate:      #8FB2CB;
+    --slate-bg:   #1D2A34;
+    --shadow:     0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 24px 96px;
+  }
+
+  /* ── 표제 ─────────────────────────────────────────── */
+
+  .masthead {
+    border-bottom: 2px solid var(--ink);
+    padding: 56px 0 20px;
+    margin-bottom: 8px;
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin: 0 0 18px;
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: clamp(30px, 4.6vw, 46px);
+    line-height: 1.22;
+    letter-spacing: -.02em;
+    text-wrap: balance;
+    margin: 0 0 14px;
+  }
+
+  .standfirst {
+    font-size: 16.5px;
+    color: var(--muted);
+    max-width: 62ch;
+    margin: 0;
+  }
+
+  .factbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    background: var(--surface);
+    margin: 28px 0 0;
+    overflow: hidden;
+  }
+  .fact {
+    flex: 1 1 150px;
+    padding: 13px 18px;
+    border-right: 1px solid var(--rule-soft);
+  }
+  .fact:last-child { border-right: 0; }
+  .fact dt {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin: 0 0 3px;
+  }
+  .fact dd {
+    margin: 0;
+    font-size: 14.5px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── 레이아웃 ─────────────────────────────────────── */
+
+  .layout { display: block; }
+
+  @media (min-width: 1000px) {
+    .layout {
+      display: grid;
+      grid-template-columns: 186px minmax(0, 1fr);
+      gap: 56px;
+      align-items: start;
+    }
+    nav.toc {
+      position: sticky;
+      top: 28px;
+      padding-top: 46px;
+    }
+  }
+
+  nav.toc ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    border-top: 1px solid var(--rule);
+    padding-top: 14px;
+  }
+  @media (min-width: 1000px) {
+    nav.toc ol { display: block; border-top: 0; padding-top: 0; }
+  }
+  nav.toc a {
+    display: block;
+    padding: 3px 0;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13.5px;
+    border-left: 2px solid transparent;
+  }
+  @media (min-width: 1000px) {
+    nav.toc a { padding-left: 12px; border-left-color: var(--rule); }
+  }
+  nav.toc a:hover { color: var(--ink); border-left-color: var(--seal); }
+  nav.toc a:focus-visible { outline: 2px solid var(--slate); outline-offset: 2px; }
+  nav.toc .num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--faint);
+    margin-right: 7px;
+  }
+
+  section { padding-top: 46px; scroll-margin-top: 20px; }
+
+  h2 {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 25px;
+    letter-spacing: -.015em;
+    margin: 0 0 6px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  h2 .num {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--seal);
+    letter-spacing: 0;
+  }
+
+  h3 {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 16px;
+    margin: 30px 0 10px;
+    letter-spacing: -.005em;
+  }
+
+  p { margin: 0 0 14px; max-width: 66ch; }
+  .lead { color: var(--muted); margin-top: 14px; }
+
+  strong { font-weight: 600; }
+  em { font-style: normal; color: var(--seal); font-weight: 500; }
+
+  /* ── 카드/표 ──────────────────────────────────────── */
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 20px 22px;
+    box-shadow: var(--shadow);
+  }
+
+  .grid2 { display: grid; gap: 14px; grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .grid2 { grid-template-columns: 1fr 1fr; } }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .scroller { overflow-x: auto; margin: 14px 0 0; }
+  th, td {
+    text-align: left;
+    padding: 9px 14px 9px 0;
+    border-bottom: 1px solid var(--rule-soft);
+    vertical-align: top;
+  }
+  th {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--faint);
+    font-weight: 500;
+    border-bottom-color: var(--rule);
+    white-space: nowrap;
+  }
+
+  /* ── 블록 칩 ──────────────────────────────────────── */
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 2px 9px;
+    border-radius: 2px;
+    background: var(--slate-bg);
+    color: var(--slate);
+    white-space: nowrap;
+  }
+  .chip.community { background: var(--surface-2); color: var(--muted); }
+  .chip .dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: currentColor; flex: none;
+  }
+
+  /* ── 미니 와이어프레임 ────────────────────────────── */
+
+  .wf {
+    width: 46px; height: 30px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background: var(--surface-2);
+    display: flex; flex: none;
+    padding: 3px; gap: 2px;
+    overflow: hidden;
+  }
+  .wf i { background: var(--rule); border-radius: 1px; display: block; }
+  .wf[data-shape="bar"]    { padding: 11px 4px; }
+  .wf[data-shape="bar"] i  { flex: 1; height: 100%; }
+  .wf[data-shape="hero"]   { flex-direction: column; justify-content: center; align-items: center; gap: 3px; }
+  .wf[data-shape="hero"] i:nth-child(1) { width: 60%; height: 5px; background: var(--slate); }
+  .wf[data-shape="hero"] i:nth-child(2) { width: 40%; height: 3px; }
+  .wf[data-shape="cards"] i  { flex: 1; height: 100%; }
+  .wf[data-shape="stats"]    { align-items: center; }
+  .wf[data-shape="stats"] i  { flex: 1; height: 11px; }
+  .wf[data-shape="split"] i:nth-child(1) { flex: 1.1; height: 100%; }
+  .wf[data-shape="split"] i:nth-child(2) { flex: 1; height: 100%; background: var(--rule-soft); }
+  .wf[data-shape="list"]  { flex-direction: column; justify-content: center; gap: 3px; }
+  .wf[data-shape="list"] i { width: 100%; height: 4px; }
+  .wf[data-shape="form"]  { flex-direction: column; gap: 3px; }
+  .wf[data-shape="form"] i:nth-child(1) { width: 100%; height: 6px; }
+  .wf[data-shape="form"] i:nth-child(2) { width: 100%; height: 6px; }
+  .wf[data-shape="form"] i:nth-child(3) { width: 42%; height: 6px; background: var(--slate); }
+  .wf[data-shape="map"]   { padding: 0; }
+  .wf[data-shape="map"] i { flex: 1; height: 100%; background:
+      repeating-linear-gradient(45deg, var(--rule) 0 3px, transparent 3px 7px); }
+  .wf[data-shape="foot"]  { flex-direction: column; justify-content: flex-end; gap: 3px; }
+  .wf[data-shape="foot"] i:nth-child(1) { width: 100%; height: 9px; }
+  .wf[data-shape="foot"] i:nth-child(2) { width: 55%; height: 3px; }
+
+  /* ── 페이지 구성 스트립 ───────────────────────────── */
+
+  .page-head {
+    display: flex; align-items: baseline; gap: 12px;
+    flex-wrap: wrap;
+    margin: 34px 0 0;
+    padding-bottom: 9px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .page-head h3 { margin: 0; font-size: 17px; }
+  .page-head .path {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--faint);
+  }
+  .page-head .goal {
+    margin-left: auto;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  ol.strip { list-style: none; margin: 0; padding: 0; }
+  ol.strip > li {
+    display: grid;
+    grid-template-columns: 26px 46px minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+  ol.strip .ord {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--faint);
+    padding-top: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+  .slot-title {
+    font-weight: 600;
+    font-size: 14.5px;
+    margin: 0 0 4px;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  }
+  .slot-note { margin: 0; font-size: 13.5px; color: var(--muted); max-width: 62ch; }
+  .slot-copy {
+    margin: 6px 0 0;
+    font-size: 13.5px;
+    font-family: var(--serif);
+    color: var(--ink);
+    padding-left: 12px;
+    border-left: 2px solid var(--rule);
+    max-width: 58ch;
+  }
+
+  /* ── 주의 ─────────────────────────────────────────── */
+
+  .flag {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--seal-bg);
+    border-left: 3px solid var(--seal);
+    border-radius: 0 3px 3px 0;
+    margin: 0 0 12px;
+  }
+  .flag .mark {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .08em;
+    color: var(--seal);
+    font-weight: 500;
+    padding-top: 3px;
+    white-space: nowrap;
+  }
+  .flag p { margin: 0; font-size: 14px; max-width: none; }
+  .flag p + p { margin-top: 6px; }
+
+  ul.plain { margin: 0 0 14px; padding-left: 19px; max-width: 66ch; }
+  ul.plain li { margin-bottom: 6px; }
+  ul.plain li::marker { color: var(--faint); }
+
+  .checklist { list-style: none; margin: 0; padding: 0; }
+  .checklist li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 11px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--rule-soft);
+    font-size: 14px;
+  }
+  .checklist .tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .08em;
+    padding: 2px 7px;
+    border-radius: 2px;
+    background: var(--surface-2);
+    color: var(--muted);
+    height: fit-content;
+    margin-top: 2px;
+    white-space: nowrap;
+  }
+  .checklist .tag.must { background: var(--seal-bg); color: var(--seal); }
+
+  /* ── 사이트맵 ─────────────────────────────────────── */
+
+  .sitemap { margin: 16px 0 0; }
+  .sitemap .root {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--muted);
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .sitemap ul { list-style: none; margin: 0; padding: 0; }
+  .sitemap > ul > li {
+    display: grid;
+    grid-template-columns: 118px minmax(0, 1fr);
+    gap: 16px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--rule-soft);
+    align-items: baseline;
+  }
+  .sitemap .slug {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--slate);
+  }
+  .sitemap .label { font-weight: 600; font-size: 14.5px; }
+  .sitemap .sub {
+    margin: 3px 0 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  footer.colophon {
+    margin-top: 64px;
+    padding-top: 18px;
+    border-top: 2px solid var(--ink);
+    font-size: 13px;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+  }
+  footer.colophon .mono { font-family: var(--mono); font-size: 12px; color: var(--faint); }
+
+  @media (prefers-reduced-motion: no-preference) {
+    nav.toc a { transition: color .15s, border-color .15s; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">웹사이트 제작 기획서 · 초안</p>
+    <h1>세무법인 웹사이트 기획서</h1>
+    <p class="standfirst">
+      세무사 2인·직원 3인 규모의 지역 세무법인을 위한 5페이지 구성안입니다.
+      서비스 소개와 상담 문의 접수를 목적으로 하며, 모든 섹션은 식스샵 프로
+      마켓플레이스에 실제로 존재하는 블록으로 지정했습니다.
+    </p>
+
+    <dl class="factbar">
+      <div class="fact"><dt>페이지</dt><dd>5 + 칼럼</dd></div>
+      <div class="fact"><dt>지정 블록</dt><dd>22개</dd></div>
+      <div class="fact"><dt>디자인 톤</dt><dd>Calm 계열</dd></div>
+      <div class="fact"><dt>커스텀 필요</dt><dd>3건</dd></div>
+      <div class="fact"><dt>예상 예산</dt><dd>200만원대</dd></div>
+    </dl>
+  </header>
+
+  <div class="layout">
+
+    <nav class="toc" aria-label="목차">
+      <ol>
+        <li><a href="#brief"><span class="num">01</span>브리프</a></li>
+        <li><a href="#strategy"><span class="num">02</span>전략</a></li>
+        <li><a href="#sitemap"><span class="num">03</span>사이트맵</a></li>
+        <li><a href="#pages"><span class="num">04</span>페이지 구성</a></li>
+        <li><a href="#features"><span class="num">05</span>기능</a></li>
+        <li><a href="#cautions"><span class="num">06</span>제작 유의점</a></li>
+        <li><a href="#tech"><span class="num">07</span>기술 검토</a></li>
+      </ol>
+    </nav>
+
+    <main>
+
+      <!-- 01 ─────────────────────────────────────────── -->
+      <section id="brief">
+        <h2><span class="num">01</span>브리프</h2>
+
+        <div class="scroller">
+          <table>
+            <tbody>
+              <tr><th>업종</th><td>지역 세무법인</td></tr>
+              <tr><th>규모</th><td>세무사 2명, 직원 3명</td></tr>
+              <tr><th>현재 자산</th><td>웹사이트 없음. 블로그 운영 중</td></tr>
+              <tr><th>목적</th><td>제공 서비스 소개, 상담 문의 접수</td></tr>
+              <tr><th>예산</th><td>200만원대</td></tr>
+              <tr><th>톤</th><td>전문적이고 신뢰감 있는</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>계약 전에 확인해야 할 것</h3>
+        <p class="lead">
+          아래 항목은 브리프에 없지만 페이지 구성과 공수를 바꿉니다.
+          첫 미팅에서 정리하는 것을 권합니다.
+        </p>
+        <ul class="plain">
+          <li><strong>주력 고객층</strong> — 개인사업자·소상공인 위주인지, 법인 기장이 중심인지, 상속·양도 같은 단발성 상담이 많은지. 홈 첫 화면 문구와 서비스 배열 순서가 여기서 갈립니다.</li>
+          <li><strong>블로그 처리 방침</strong> — 기존 블로그를 옮길지, 남기고 링크만 걸지. <em>옮기면 누적된 검색 유입을 잃습니다.</em></li>
+          <li><strong>세무사 프로필 공개 범위</strong> — 사진, 약력, 자격 취득 연도를 어디까지 실을지. 신뢰 형성의 핵심 재료입니다.</li>
+          <li><strong>실적 수치 사용 가능 여부</strong> — 경력 연수, 누적 거래처 수 등. 쓸 수 있으면 홈에 통계 섹션을 넣고, 못 쓰면 그 자리를 다른 섹션으로 대체합니다.</li>
+          <li><strong>상담 접수 경로</strong> — 이메일, 카카오톡 채널, 전화 중 실제로 응대 가능한 것. 폼만 만들어 두고 아무도 안 보는 경우가 가장 흔한 실패입니다.</li>
+        </ul>
+      </section>
+
+      <!-- 02 ─────────────────────────────────────────── -->
+      <section id="strategy">
+        <h2><span class="num">02</span>전략</h2>
+
+        <p>
+          세무 서비스는 가격이나 기능으로 비교되지 않습니다. 방문자가 판단하는 것은
+          <strong>이 사람에게 내 장부를 맡겨도 되는가</strong> 하나입니다.
+          따라서 이 사이트의 모든 섹션은 신뢰의 근거를 하나씩 쌓고,
+          마지막에 문의로 연결하는 순서로 배열합니다.
+        </p>
+
+        <div class="grid2">
+          <div class="card">
+            <h3 style="margin-top:0">단일 목표</h3>
+            <p class="slot-note">
+              상담 문의 1건. 방문자가 사이트에서 할 수 있는 유의미한 행동은
+              문의뿐이므로, 모든 페이지 하단과 화면 우측 고정 버튼에
+              동일한 문의 동선을 둡니다.
+            </p>
+          </div>
+          <div class="card">
+            <h3 style="margin-top:0">신뢰의 재료 네 가지</h3>
+            <p class="slot-note">
+              실명과 얼굴이 드러난 세무사 프로필 · 다뤄 본 사안의 범위 ·
+              기존 고객의 말 · 실제로 찾아갈 수 있는 사무실 위치.
+              이 넷을 홈에서 모두 한 번씩 보여줍니다.
+            </p>
+          </div>
+        </div>
+
+        <h3>디자인 톤: Calm 계열로 통일</h3>
+        <p>
+          마켓플레이스 블록 230개 중 <strong>Calm</strong> 계열이 26개로,
+          헤더·메인 배너·정보·폼·지도·푸터까지 필요한 영역을 빠짐없이 덮는
+          유일한 계열입니다. 한 계열로 통일하면 블록마다 색과 여백을 손보는
+          작업이 사라져 예산 안에 들어옵니다.
+        </p>
+        <p>
+          차분한 중립 색조와 절제된 여백이 세무 업종의 톤과도 맞습니다.
+          Natural 계열이 차선이지만 블록 수가 10개로 적어 중간에
+          다른 계열을 섞어야 하고, 그 순간 통일감이 무너집니다.
+        </p>
+      </section>
+
+      <!-- 03 ─────────────────────────────────────────── -->
+      <section id="sitemap">
+        <h2><span class="num">03</span>사이트맵</h2>
+
+        <div class="sitemap">
+          <p class="root">/ &nbsp;세무법인 웹사이트</p>
+          <ul>
+            <li>
+              <span class="slug">/</span>
+              <div>
+                <span class="label">홈</span>
+                <p class="sub">신뢰 재료 네 가지를 한 번씩 보여주고 문의로 연결하는 요약 페이지</p>
+              </div>
+            </li>
+            <li>
+              <span class="slug">/about</span>
+              <div>
+                <span class="label">세무법인 소개</span>
+                <p class="sub">인사말 · 세무사 2인 프로필 · 사무실 위치</p>
+              </div>
+            </li>
+            <li>
+              <span class="slug">/services</span>
+              <div>
+                <span class="label">서비스 안내</span>
+                <p class="sub">기장대행 · 세무조정 · 세무조사 대응 · 상속증여 · 양도소득세 · 법인설립</p>
+              </div>
+            </li>
+            <li>
+              <span class="slug">/contact</span>
+              <div>
+                <span class="label">상담 안내</span>
+                <p class="sub">상담 절차 · 자주 묻는 질문 · 문의 폼 · 오시는 길</p>
+              </div>
+            </li>
+            <li>
+              <span class="slug">/column</span>
+              <div>
+                <span class="label">세무 칼럼</span>
+                <p class="sub">식스샵 기본 게시판 기능 사용. 마켓플레이스에 게시판 블록이 없음</p>
+              </div>
+            </li>
+            <li>
+              <span class="slug">/privacy</span>
+              <div>
+                <span class="label">개인정보처리방침</span>
+                <p class="sub">푸터에서만 연결. 문의 폼 운영에 필요</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <h3 style="margin-top:28px">메뉴 구조</h3>
+        <p class="lead">
+          상단 메뉴는 4개로 제한합니다. 세무 서비스는 항목이 잘게 나뉘기 쉬운데,
+          메뉴가 길어지면 방문자가 자기 상황에 맞는 항목을 못 고릅니다.
+          세부 서비스는 서비스 안내 한 페이지 안에서 앵커로 처리합니다.
+        </p>
+      </section>
+
+      <!-- 04 ─────────────────────────────────────────── -->
+      <section id="pages">
+        <h2><span class="num">04</span>페이지 구성</h2>
+        <p class="lead">
+          각 줄이 하나의 블록입니다. <span class="chip"><span class="dot"></span>파란 칩</span>은
+          Calm 계열 공식 파트너 블록, <span class="chip community"><span class="dot"></span>회색 칩</span>은
+          스타일 계열이 없는 커뮤니티 블록입니다.
+        </p>
+
+        <div class="page-head">
+          <h3>홈</h3>
+          <span class="path">/</span>
+          <span class="goal">방문 후 30초 안에 문의 버튼까지 도달</span>
+        </div>
+
+        <ol class="strip">
+          <li>
+            <span class="ord">01</span>
+            <span class="wf" data-shape="bar" aria-hidden="true"><i></i></span>
+            <div>
+              <p class="slot-title">전역 헤더 <span class="chip"><span class="dot"></span>헤더 (Calm)</span></p>
+              <p class="slot-note">로고, 4개 메뉴, 우측에 상담 문의 버튼. 최대 3단계 메뉴를 지원하지만 1단계만 씁니다.</p>
+            </div>
+          </li>
+          <li>
+            <span class="ord">02</span>
+            <span class="wf" data-shape="hero" aria-hidden="true"><i></i><i></i></span>
+            <div>
+              <p class="slot-title">첫 화면 <span class="chip"><span class="dot"></span>이미지 배너 (Calm)</span></p>
+              <p class="slot-note">사무실 실사진 위에 한 문장과 버튼. 스톡 이미지 대신 실제 사무실을 찍는 편이 신뢰에 훨씬 유리합니다.</p>
+              <p class="slot-copy">복잡한 세무, 설명부터 다릅니다<br>— 지역명 · 세무법인명 —</p>
+            </div>
+          </li>
+          <li>
+            <span class="ord">03</span>
+            <span class="wf" data-shape="cards" aria-hidden="true"><i></i><i></i><i></i></span>
+            <div>
+              <p class="slot-title">핵심 서비스 3종 <span class="chip"><span class="dot"></span>카드 배너 (Calm)</span></p>
+              <p class="slot-note">기장대행 · 세무조정 · 상속증여를 나란히. 원래 상품 소개용 블록이지만 아이콘과 텍스트 조합이라 서비스 소개로 그대로 전용됩니다.</p>
+            </div>
+          </li>
+          <li>
+            <span class="ord">04</span>
+            <span class="wf" data-shape="stats" aria-hidden="true"><i></i><i></i><i></i></span>
+            <div>
+              <p class="slot-title">실적 수치 <span class="chip community"><span class="dot"></span>타이틀+카운팅 박스</span></p>
+              <p class="slot-note">경력 연수, 누적 거래처 수, 연간 신고 건수. 스크롤하면 숫자가 올라갑니다. <em>고객이 수치를 못 준다면 이 섹션은 통째로 뺍니다.</em></p>
+            </div>
+          </li>
+          <li>
+            <span class="ord">05</span>
+            <span class="wf" data-shape="split" aria-hidden="true"><i></i><i></i></span>
+            <div>
+              <p class="slot-title">대표 세무사 소개 <span class="chip"><span class="dot"></span>이미지+텍스트 (Calm)</span></p>
+              <p class="slot-note">좌측 인물 사진, 우측 약력 3~4줄과 소개 페이지 링크. 얼굴이 보이는 것과 아닌 것의 차이가 큽니다.</p>
+            </div>
+          </li>
+          <li>
+            <span class="ord">06</span>
+            <span class="wf" data-shape="list" aria-hidden="true"><i></i><i></i><i></i></span>
+            <div>
+              <p class="slot-title">고객 후기 <span class="chip"><span class="dot"></span>리뷰 (Calm)</span></p>
+              <p class="slot-note">기존 거래처 3곳의 짧은 코멘트. 업종과 규모만 밝히고 상호는 동의를 받은 곳만 표기합니다.</p>
+            </div>
+          </li>
+          <li>
+            <span class="ord">07</span>
+            <span class="wf" data-shape="bar" aria-hidden="true"><i></i></span>
+            <div>
+              <p class="slot-title">거래처 업종 <span class="chip"><span class="dot"></span>로고 목록 (Calm)</span></p>
+              <p class="slot-note">로고 사용 동의를 받기 어려우면 업종 아이콘으로 대체합니다. 이 경우 03번과 형태가 겹치니 둘 중 하나만 남깁니다.</p>
+            </div>
+          </li>
+          <li>
+            <span class="ord">08</span>
+            <span class="wf" data-shape="list" aria-hidden="true"><i></i><i></i><i></i></span>
+            <div>
+              <p class="slot-title">자주 묻는 질문 <span class="chip"><span class="dot"></span>질의응답 (Calm)</span></p>
+              <p class="slot-note">5개. 비용, 기장 전환 절차, 상담 소요 시간처럼 문의 전에 걸리는 것들로 채웁니다.</p>
+            </div>
+          </li>
+          <li>
+            <span class="ord">09</span>
+            <span class="wf" data-shape="form" aria-hidden="true"><i></i><i></i><i></i></span>
+            <div>
+              <p class="slot-title">상담 문의 <span class="chip"><span class="dot"></span>문의 폼 (Calm)</span></p>
+              <p class="slot-note">이름·연락처·업종·문의 내용 네 칸. 개인정보 수집 동의 체크박스를 반드시 붙입니다.</p>
+            </div>
+          </li>
+          <li>
+            <span class="ord">10</span>
+            <span class="wf" data-shape="map" aria-hidden="true"><i></i></span>
+            <div>
+              <p class="slot-title">오시는 길 <span class="chip"><span class="dot"></span>지도 (Calm)</span></p>
+              <p class="slot-note">구글 맵 연동. 국내 방문객 기준으로는 커뮤니티 블록인 <span class="chip community"><span class="dot"></span>카카오맵 위치 정보</span>가 더 익숙할 수 있어 비교 후 결정합니다.</p>
+            </div>
+          </li>
+          <li>
+            <span class="ord">11</span>
+            <span class="wf" data-shape="foot" aria-hidden="true"><i></i><i></i></span>
+            <div>
+              <p class="slot-title">푸터 <span class="chip"><span class="dot"></span>푸터 (Calm)</span></p>
+              <p class="slot-note">상호, 대표자, 사업자등록번호, 주소, 전화, 개인정보처리방침 링크.</p>
+            </div>
+          </li>
+          <li>
+            <span class="ord">—</span>
+            <span class="wf" data-shape="bar" aria-hidden="true"><i></i></span>
+            <div>
+              <p class="slot-title">전 페이지 고정 버튼 <span class="chip community"><span class="dot"></span>플로팅 배너(1)</span></p>
+              <p class="slot-note">카카오톡·전화·블로그 연결 버튼이 화면에 고정됩니다. 모바일에서 문의 전환의 상당 부분이 여기서 나옵니다.</p>
+            </div>
+          </li>
+        </ol>
+
+        <div class="page-head">
+          <h3>세무법인 소개</h3>
+          <span class="path">/about</span>
+          <span class="goal">맡겨도 되는 사람들이라는 확신</span>
+        </div>
+        <ol class="strip">
+          <li>
+            <span class="ord">01</span>
+            <span class="wf" data-shape="hero" aria-hidden="true"><i></i><i></i></span>
+            <div>
+              <p class="slot-title">페이지 상단 <span class="chip community"><span class="dot"></span>상단배너와 브레드크럼</span></p>
+              <p class="slot-note">서브 페이지 공통 머리 영역. 기업 홈페이지형 구조에 맞게 설계된 블록이라 4개 서브 페이지에 동일하게 씁니다.</p>
+            </div>
+          </li>
+          <li>
+            <span class="ord">02</span>
+            <span class="wf" data-shape="split" aria-hidden="true"><i></i><i></i></span>
+            <div>
+              <p class="slot-title">인사말 <span class="chip"><span class="dot"></span>이미지+텍스트 (Calm)</span></p>
+              <p class="slot-note">대표 세무사 명의의 5~7줄. 사무실 운영 철학보다 어떤 고객을 주로 맡아 왔는지가 더 설득력 있습니다.</p>
+            </div>
+          </li>
+          <li>
+            <span class="ord">03</span>
+            <span class="wf" data-shape="cards" aria-hidden="true"><i></i><i></i></span>
+            <div>
+              <p class="slot-title">세무사 2인 프로필 <span class="chip"><span class="dot"></span>카드 배너 (Calm)</span></p>
+              <p class="slot-note">사진, 성명, 자격 취득 연도, 주요 담당 분야. <em>인물 소개 전용 블록은 마켓플레이스에 없어 카드 배너를 전용합니다.</em></p>
+            </div>
+          </li>
+          <li>
+            <span class="ord">04</span>
+            <span class="wf" data-shape="list" aria-hidden="true"><i></i><i></i><i></i></span>
+            <div>
+              <p class="slot-title">사무소 연혁 <span class="chip"><span class="dot"></span>콘텐츠 모음 (Calm)</span></p>
+              <p class="slot-note">설립 이후 주요 시점 4~5개. 연혁이 짧으면 넣지 않는 편이 낫습니다.</p>
+            </div>
+          </li>
+          <li>
+            <span class="ord">05</span>
+            <span class="wf" data-shape="map" aria-hidden="true"><i></i></span>
+            <div>
+              <p class="slot-title">오시는 길 <span class="chip"><span class="dot"></span>지도 (Calm)</span></p>
+              <p class="slot-note">주차 안내와 대중교통 경로를 지도 아래 텍스트로 함께 적습니다.</p>
+            </div>
+          </li>
+        </ol>
+
+        <div class="page-head">
+          <h3>서비스 안내</h3>
+          <span class="path">/services</span>
+          <span class="goal">내 상황에 맞는 항목 찾기</span>
+        </div>
+        <ol class="strip">
+          <li>
+            <span class="ord">01</span>
+            <span class="wf" data-shape="hero" aria-hidden="true"><i></i><i></i></span>
+            <div>
+              <p class="slot-title">페이지 상단 <span class="chip community"><span class="dot"></span>상단배너와 브레드크럼</span></p>
+            </div>
+          </li>
+          <li>
+            <span class="ord">02</span>
+            <span class="wf" data-shape="cards" aria-hidden="true"><i></i><i></i><i></i></span>
+            <div>
+              <p class="slot-title">서비스 6종 목록 <span class="chip"><span class="dot"></span>카테고리 탐색 (Calm)</span></p>
+              <p class="slot-note">각 항목이 아래 상세 섹션으로 이동합니다. 상품 컬렉션 탐색용 블록을 서비스 목록으로 전용하는 구성입니다.</p>
+            </div>
+          </li>
+          <li>
+            <span class="ord">03</span>
+            <span class="wf" data-shape="split" aria-hidden="true"><i></i><i></i></span>
+            <div>
+              <p class="slot-title">서비스 상세 × 6 <span class="chip"><span class="dot"></span>이미지+텍스트 (Calm)</span></p>
+              <p class="slot-note">같은 블록을 6번 반복하고 좌우 배치를 번갈아 둡니다. 항목마다 <strong>대상 · 하는 일 · 필요한 서류 · 소요 기간</strong>을 같은 형식으로 적으면 비교가 쉬워집니다.</p>
+            </div>
+          </li>
+          <li>
+            <span class="ord">04</span>
+            <span class="wf" data-shape="list" aria-hidden="true"><i></i><i></i><i></i></span>
+            <div>
+              <p class="slot-title">서비스 관련 질문 <span class="chip"><span class="dot"></span>질의응답 (Calm)</span></p>
+            </div>
+          </li>
+          <li>
+            <span class="ord">05</span>
+            <span class="wf" data-shape="form" aria-hidden="true"><i></i><i></i><i></i></span>
+            <div>
+              <p class="slot-title">문의 유도 <span class="chip"><span class="dot"></span>이미지 배너 (Calm)</span></p>
+              <p class="slot-note">상담 페이지로 보내는 버튼 하나. 폼을 또 넣지 않고 링크로 넘깁니다.</p>
+            </div>
+          </li>
+        </ol>
+
+        <div class="page-head">
+          <h3>상담 안내</h3>
+          <span class="path">/contact</span>
+          <span class="goal">망설임을 없애고 문의 제출</span>
+        </div>
+        <ol class="strip">
+          <li>
+            <span class="ord">01</span>
+            <span class="wf" data-shape="hero" aria-hidden="true"><i></i><i></i></span>
+            <div>
+              <p class="slot-title">페이지 상단 <span class="chip community"><span class="dot"></span>상단배너와 브레드크럼</span></p>
+            </div>
+          </li>
+          <li>
+            <span class="ord">02</span>
+            <span class="wf" data-shape="cards" aria-hidden="true"><i></i><i></i><i></i></span>
+            <div>
+              <p class="slot-title">상담 절차 3단계 <span class="chip"><span class="dot"></span>카드 배너 (Calm)</span></p>
+              <p class="slot-note">문의 접수 → 담당 세무사 배정 및 연락 → 방문 또는 유선 상담. <strong>연락까지 걸리는 시간을 명시</strong>하면 문의율이 올라갑니다.</p>
+            </div>
+          </li>
+          <li>
+            <span class="ord">03</span>
+            <span class="wf" data-shape="split" aria-hidden="true"><i></i><i></i></span>
+            <div>
+              <p class="slot-title">문의 폼 + 자주 묻는 질문 <span class="chip community"><span class="dot"></span>좌측 입력폼 &amp; 우측 자주 묻는 질문 블록</span></p>
+              <p class="slot-note">좌측 폼, 우측 FAQ를 한 화면에 둡니다. 질문에 답을 얻은 방문자가 그 자리에서 바로 제출할 수 있어 이 페이지의 핵심 섹션입니다.</p>
+            </div>
+          </li>
+          <li>
+            <span class="ord">04</span>
+            <span class="wf" data-shape="map" aria-hidden="true"><i></i></span>
+            <div>
+              <p class="slot-title">오시는 길 <span class="chip"><span class="dot"></span>지도 (Calm)</span></p>
+            </div>
+          </li>
+        </ol>
+
+        <div class="page-head">
+          <h3>세무 칼럼</h3>
+          <span class="path">/column</span>
+          <span class="goal">검색 유입과 전문성 증명</span>
+        </div>
+        <ol class="strip">
+          <li>
+            <span class="ord">01</span>
+            <span class="wf" data-shape="list" aria-hidden="true"><i></i><i></i><i></i></span>
+            <div>
+              <p class="slot-title">글 목록 — 식스샵 기본 게시판</p>
+              <p class="slot-note"><em>마켓플레이스의 게시판/블로그 카테고리에는 블록이 하나도 없습니다.</em> 식스샵이 기본 제공하는 게시판 기능으로 구성하며, 이 부분은 블록 조립이 아니라 게시판 설정 작업입니다.</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <!-- 05 ─────────────────────────────────────────── -->
+      <section id="features">
+        <h2><span class="num">05</span>기능</h2>
+
+        <ul class="checklist">
+          <li>
+            <span class="tag must">필수</span>
+            <div>
+              <strong>문의 접수 및 저장</strong> — 커뮤니티 블록 <span class="chip community"><span class="dot"></span>게시판+구글 시트 연동 문의 폼</span>을 쓰면
+              접수 내용이 게시판과 구글 시트에 동시에 쌓입니다. 담당자가 엑셀로 관리하기 편해 실무 정착률이 높습니다.
+            </div>
+          </li>
+          <li>
+            <span class="tag must">필수</span>
+            <div>
+              <strong>개인정보 수집 동의</strong> — 문의 폼에 동의 체크박스와 처리방침 링크. 체크 없이는 제출이 되지 않도록 설정합니다.
+            </div>
+          </li>
+          <li>
+            <span class="tag">권장</span>
+            <div>
+              <strong>카카오톡 채널 연결</strong> — <span class="chip community"><span class="dot"></span>플로팅 배너(1)</span>에 전화·카카오톡·블로그 버튼이 포함돼 있습니다. 채널 개설은 고객사에서 진행해야 합니다.
+            </div>
+          </li>
+          <li>
+            <span class="tag">권장</span>
+            <div>
+              <strong>신고 시즌 안내 팝업</strong> — <span class="chip"><span class="dot"></span>팝업 (Calm)</span>. 5월 종합소득세, 1월 부가세 기간에만 노출하도록 기간을 지정합니다. 평소에는 꺼 둡니다.
+            </div>
+          </li>
+          <li>
+            <span class="tag">선택</span>
+            <div>
+              <strong>상단 공지 띠배너</strong> — <span class="chip"><span class="dot"></span>띠배너 (Calm)</span>. 휴무 안내나 사무실 이전 같은 단발성 공지용.
+            </div>
+          </li>
+          <li>
+            <span class="tag">선택</span>
+            <div>
+              <strong>단계별 상담 폼</strong> — 커뮤니티 블록 <span class="chip community"><span class="dot"></span>상담 폼</span>. 문의 항목이 많아질 경우 대안이지만, 단계가 늘면 이탈도 늘어 초기에는 권하지 않습니다.
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- 06 ─────────────────────────────────────────── -->
+      <section id="cautions">
+        <h2><span class="num">06</span>제작 유의점</h2>
+        <p class="lead">제작자 관점에서 미리 알고 들어가야 하는 것들입니다.</p>
+
+        <div class="flag">
+          <span class="mark">전용</span>
+          <div>
+            <p><strong>블록 설명은 전부 쇼핑몰 기준으로 쓰여 있습니다.</strong></p>
+            <p>마켓플레이스 블록의 소개글은 상품·컬렉션·구매 전환을 전제로 작성돼 있습니다. 이 사이트에서는 상품을 서비스로, 컬렉션을 서비스 분류로 바꿔 읽어야 합니다. 블록 이름만 보고 부적합하다고 넘기면 쓸 수 있는 블록을 놓칩니다.</p>
+          </div>
+        </div>
+
+        <div class="flag">
+          <span class="mark">부재</span>
+          <div>
+            <p><strong>인물 소개 전용 블록과 게시판 블록이 없습니다.</strong></p>
+            <p>세무사 프로필은 카드 배너로 대신하고, 칼럼은 식스샵 기본 게시판 기능으로 만듭니다. 견적 산정 시 이 두 가지는 블록 조립이 아니라 별도 작업으로 잡아야 합니다.</p>
+          </div>
+        </div>
+
+        <div class="flag">
+          <span class="mark">톤</span>
+          <div>
+            <p><strong>커뮤니티 블록 4개는 Calm 계열과 톤이 다릅니다.</strong></p>
+            <p>상단배너와 브레드크럼, 타이틀+카운팅 박스, 좌측 입력폼 &amp; 우측 FAQ, 플로팅 배너(1) — 이 넷은 스타일 계열이 없어 색·폰트·모서리 반경을 Calm에 맞추는 커스텀이 필요합니다. <strong>커스텀 필요 3~4건이 이 항목입니다.</strong></p>
+          </div>
+        </div>
+
+        <div class="flag">
+          <span class="mark">규정</span>
+          <div>
+            <p><strong>세무사 광고에는 별도 규정이 있습니다.</strong></p>
+            <p>성공률, 환급액 보장, 최고·최대 같은 표현은 문제가 될 수 있습니다. 문구 확정 전에 고객사에서 소속 세무사회 광고 규정을 확인하도록 요청하고, 확인 전까지는 사실 기반 표현만 씁니다.</p>
+          </div>
+        </div>
+
+        <div class="flag">
+          <span class="mark">유입</span>
+          <div>
+            <p><strong>기존 블로그를 옮기면 검색 유입이 끊깁니다.</strong></p>
+            <p>지금 이 법인의 유일한 유입 경로입니다. 초기에는 블로그를 그대로 두고 사이트에서 링크로 연결하는 편이 안전합니다. 사이트 칼럼은 새 글부터 쌓아 나가고, 6개월 뒤 지표를 보고 통합 여부를 판단하도록 제안합니다.</p>
+          </div>
+        </div>
+
+        <h3>고객사에서 받아야 할 자료</h3>
+        <p class="lead">이 목록을 계약 직후에 넘기면 제작 지연의 대부분이 사라집니다.</p>
+        <ul class="plain">
+          <li>세무사 2인의 프로필 사진, 약력, 자격 취득 연도, 담당 분야</li>
+          <li>사무실 내·외부 사진 (첫 화면과 오시는 길에 사용)</li>
+          <li>서비스 6종에 대한 설명 초안 — 대상, 하는 일, 필요 서류, 소요 기간</li>
+          <li>고객 후기 3건과 상호 노출 동의 여부</li>
+          <li>사업자등록번호, 상호, 대표자명, 주소, 대표 전화</li>
+          <li>실적 수치 사용 가능 여부와 근거</li>
+        </ul>
+
+        <h3>예산 검토</h3>
+        <p>
+          지정한 블록 22개 중 18개가 마켓플레이스 무료 블록이고, 커스텀이 필요한 것은
+          톤을 맞춰야 하는 커뮤니티 블록 3~4건입니다. 게시판 설정과 폼 연동을 더해도
+          <strong>200만원대 예산 안에서 무리가 없습니다.</strong>
+        </p>
+        <p>
+          예산을 넘길 수 있는 요인은 두 가지입니다. 사무실·인물 사진 촬영을 포함할 경우,
+          그리고 서비스 6종의 설명 원고를 제작 측에서 작성할 경우입니다.
+          <em>두 항목은 견적서에서 분리해 표기하는 것을 권합니다.</em>
+        </p>
+      </section>
+
+      <!-- 07 ─────────────────────────────────────────── -->
+      <section id="tech">
+        <h2><span class="num">07</span>기술 검토</h2>
+        <p class="lead">
+          블록을 골라 얹는 것만으로 끝나지 않는 항목들입니다.
+          디자인·개발 단계에서 확인하고 넘어가야 오픈 후에 되돌아오지 않습니다.
+        </p>
+
+        <h3>반응형과 기기 확인</h3>
+        <ul class="plain">
+          <li><strong>커뮤니티 블록의 모바일 대응은 개별 확인이 필요합니다.</strong> 파트너가 만든 Calm 계열은 대응 수준이 고르지만, 커뮤니티 블록 4개는 제작자가 제각각이라 보장되지 않습니다. 각 블록의 데모 페이지를 실제 휴대폰으로 열어 보고 확정합니다.</li>
+          <li>세무 상담은 <strong>모바일 유입 비중이 큽니다.</strong> 데스크톱에서 먼저 만들고 모바일을 나중에 손보는 순서가 아니라, 좁은 화면을 기준으로 확인하며 진행합니다.</li>
+          <li>아이폰 사파리에서 화면 높이를 100%로 잡은 히어로 영역이 주소창 때문에 잘리는 문제가 흔합니다. 첫 화면 블록은 실기기에서 반드시 확인합니다.</li>
+        </ul>
+
+        <h3>속도</h3>
+        <ul class="plain">
+          <li><strong>블록마다 자체 스크립트와 스타일을 불러옵니다.</strong> 블록을 많이 얹을수록 첫 화면이 늦게 뜹니다. 홈에 12개를 배치했으므로, 오픈 전에 실제 측정을 한 번 하고 무거운 블록을 가려냅니다.</li>
+          <li>첫 화면 배경 이미지가 전체 속도를 좌우합니다. <strong>가로 1920px, 200KB 이하</strong>를 목표로 압축하고 WebP를 우선합니다.</li>
+          <li>첫 화면 아래 블록의 이미지는 지연 로딩으로 두되, <em>히어로 이미지에는 지연 로딩을 걸지 않습니다.</em> 오히려 느려집니다.</li>
+          <li>스크롤 카운팅 애니메이션처럼 움직이는 블록은 한 페이지에 하나로 제한합니다.</li>
+        </ul>
+
+        <h3>글꼴</h3>
+        <ul class="plain">
+          <li>한글 웹폰트는 파일이 큽니다. <strong>굵기는 두 종류까지만</strong> 쓰고, 본문용과 제목용을 각각 하나씩 정해 그 안에서 해결합니다.</li>
+          <li>폰트가 늦게 도착해 글자가 잠깐 안 보이는 현상을 막으려면 교체 방식을 지정하고, 대체 글꼴을 함께 지정합니다.</li>
+          <li>세무 업종 특성상 <strong>숫자와 표가 자주 나옵니다.</strong> 자릿수가 세로로 맞는 글꼴 설정을 적용해 두면 금액 표기가 훨씬 정돈돼 보입니다.</li>
+        </ul>
+
+        <h3>접근성</h3>
+        <ul class="plain">
+          <li>고령 방문자 비중이 있는 업종입니다. <strong>본문 글자 크기를 기본값보다 키우고</strong>, 옅은 회색 본문을 피해 명도 대비를 확보합니다.</li>
+          <li>문의 폼의 모든 입력칸에 라벨을 붙입니다. 안내 문구만 흐리게 넣는 방식은 입력을 시작하면 사라져 무엇을 적는 칸인지 알 수 없게 됩니다.</li>
+          <li>모든 이미지에 대체 텍스트를 넣습니다. 사무실 사진, 세무사 사진은 특히 검색에도 도움이 됩니다.</li>
+          <li>키보드로 이동할 때 지금 어디에 있는지 보이도록 초점 표시를 남깁니다. 블록에서 이를 지워 둔 경우가 있어 확인이 필요합니다.</li>
+        </ul>
+
+        <h3>검색 노출</h3>
+        <ul class="plain">
+          <li><strong>페이지마다 제목과 설명을 따로 지정합니다.</strong> 블록 조립형에서 가장 자주 빠지는 항목입니다.</li>
+          <li>큰 제목 태그가 페이지마다 하나씩만 오도록 정리합니다. 블록을 여러 개 얹으면 중복되기 쉽습니다.</li>
+          <li>지역 업종이므로 <strong>사업장 정보를 구조화 데이터로 넣습니다.</strong> 상호·주소·전화·영업시간을 검색엔진이 읽을 수 있는 형식으로 표기합니다.</li>
+          <li><strong>상호·주소·전화 표기를 모든 채널에서 똑같이 맞춥니다.</strong> 사이트, 네이버 플레이스, 블로그의 표기가 다르면 지역 검색에서 손해를 봅니다. 띄어쓰기와 층수 표기까지 통일합니다.</li>
+          <li>카카오톡이나 문자로 주소를 공유할 때 보이는 미리보기 이미지를 지정합니다. 없으면 빈 회색 상자로 나갑니다.</li>
+        </ul>
+
+        <h3>문의 폼</h3>
+        <ul class="plain">
+          <li><strong>스팸 대응을 넣습니다.</strong> 공개된 문의 폼은 예외 없이 자동 등록 대상이 됩니다. 사람 눈에 안 보이는 함정 입력칸을 두는 방식이 방문자에게 부담이 없어 우선 검토합니다.</li>
+          <li><strong>접수 알림을 이중으로 겁니다.</strong> 게시판 저장과 담당자 메일 발송을 함께 둡니다. 한쪽이 조용히 실패해도 문의를 놓치지 않습니다.</li>
+          <li>오픈 전에 실제로 제출해 보고, <strong>담당자 휴대폰까지 알림이 도착하는지</strong> 확인합니다. 여기까지 해야 폼 작업이 끝난 것입니다.</li>
+          <li>수집 항목을 필요한 것만 남깁니다. 주민번호나 사업자번호는 상담 단계에서 받지 않습니다.</li>
+        </ul>
+
+        <h3>측정과 인계</h3>
+        <ul class="plain">
+          <li><strong>분석 도구를 설치하고 문의 제출을 전환으로 잡습니다.</strong> 이게 없으면 6개월 뒤 성과를 설명할 수 없고, 재계약 근거도 사라집니다.</li>
+          <li>주소는 www 유무 중 하나로 통일하고 나머지는 그쪽으로 넘깁니다. 보안 연결과 자동 전환을 확인합니다.</li>
+          <li><strong>고객사가 직접 고칠 영역을 미리 정합니다.</strong> 공지 띠배너, 칼럼 글, 팝업 정도가 적당합니다. 그 범위만 담은 짧은 사용 안내를 함께 넘깁니다.</li>
+          <li>블록에 손댄 커스텀이 마켓플레이스 블록 업데이트 시 유지되는지 확인이 필요합니다. <em>덮어써진다면 커스텀 내용을 별도로 보관해 두어야 합니다.</em></li>
+        </ul>
+
+        <h3>이미지 규격</h3>
+        <p>
+          블록마다 요구하는 비율이 다릅니다. 촬영을 진행한다면
+          <strong>필요한 비율을 미리 정리해 촬영 가이드로 넘기는 편</strong>이 낫습니다.
+          나중에 잘라 맞추면 인물의 얼굴이 잘리거나 여백이 어색해집니다.
+        </p>
+        <div class="scroller">
+          <table>
+            <thead>
+              <tr><th>용도</th><th>비율</th><th>권장 크기</th><th>비고</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>첫 화면 배경</td><td>16:9</td><td>1920×1080</td><td>가운데 문구가 얹히므로 중앙은 비워 촬영</td></tr>
+              <tr><td>세무사 프로필</td><td>1:1</td><td>800×800</td><td>상반신, 배경 단순하게</td></tr>
+              <tr><td>서비스 상세</td><td>4:3</td><td>1200×900</td><td>6장, 톤 통일</td></tr>
+              <tr><td>사무실 전경</td><td>3:2</td><td>1600×1067</td><td>오시는 길과 소개에 공용</td></tr>
+              <tr><td>공유 미리보기</td><td>1.91:1</td><td>1200×630</td><td>상호가 읽히도록</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer class="colophon">
+        <span>세무법인 웹사이트 기획서 · 초안</span>
+        <span class="mono">식스샵 프로 마켓플레이스 블록 230개 기준</span>
+        <span class="mono">지정 블록 22 · Calm 계열 18 · 커뮤니티 4</span>
+      </footer>
+
+    </main>
+  </div>
+</div>
