@@ -71,14 +71,56 @@ function mediaUrl(node, depth = 0) {
   return null;
 }
 
-/** 필드 이름을 모르므로, 이미지처럼 보이는 필드를 전부 훑어 첫 URL 을 쓴다. */
-function findImage(rec) {
-  for (const [key, value] of Object.entries(rec)) {
-    if (!IMAGE_KEY.test(key)) continue;
-    const found = mediaUrl(value);
-    if (found) return found;
+// 업로드 프로바이더가 local 이라 파일을 Strapi 서버가 직접 서빙한다.
+// 그래서 응답의 url 이 /uploads/... 상대경로로 오고, 앞에 원본 주소를 붙여야 열린다.
+const MEDIA_ORIGIN = (process.env.MEDIA_ORIGIN ?? 'https://marketplace.sixshop.io').replace(/\/+$/, '');
+
+const absolutize = (url) =>
+  !url ? null : /^https?:\/\//.test(url) ? url : `${MEDIA_ORIGIN}/${url.replace(/^\/+/, '')}`;
+
+/** 미디어 객체(그 안에 url 과 formats 를 가진 것)를 찾아 꺼낸다. */
+function mediaNode(node, depth = 0) {
+  if (!node || typeof node !== 'object' || depth > 6) return null;
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      const found = mediaNode(item, depth + 1);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (typeof node.url === 'string') return node;
+  for (const key of ['data', 'attributes']) {
+    if (node[key]) {
+      const found = mediaNode(node[key], depth + 1);
+      if (found) return found;
+    }
   }
   return null;
+}
+
+/**
+ * 필드 이름을 모르므로 이미지처럼 보이는 필드를 전부 훑는다.
+ * Strapi 가 크기별 이미지를 미리 만들어 두므로, 목록에 깔 용도로는 medium 을
+ * 쓰고 원본은 상세보기용으로 따로 남긴다. GIF 처럼 formats 가 없는 것도 있다.
+ */
+function findImages(rec) {
+  for (const [key, value] of Object.entries(rec)) {
+    if (!IMAGE_KEY.test(key)) continue;
+
+    const node = mediaNode(value);
+    if (node) {
+      const f = node.formats ?? {};
+      return {
+        thumbnail: absolutize(f.medium?.url ?? f.small?.url ?? f.thumbnail?.url ?? node.url),
+        imageUrl: absolutize(node.url),
+      };
+    }
+
+    // 미디어 객체가 아니라 주소 문자열만 들어있는 경우
+    const plain = mediaUrl(value);
+    if (plain) return { thumbnail: absolutize(plain), imageUrl: absolutize(plain) };
+  }
+  return { thumbnail: null, imageUrl: null };
 }
 
 /** 관계 필드에서 사람이 읽을 이름들을 꺼낸다. 값이 여러 개일 수 있다. */
@@ -205,6 +247,7 @@ function normalizeBlock(rec, categoryHint) {
   )];
 
   const fromName = splitStyle(name);
+  const { thumbnail, imageUrl } = findImages(rec);
 
   return {
     blockId: pick(rec, ['blockId', 'block_id', 'documentId', 'uid', 'id']),
@@ -216,7 +259,8 @@ function normalizeBlock(rec, categoryHint) {
     officialPartner: tags.includes(PARTNER_TAG),
     tags: otherTags,
     author: relationName(pick(rec, ['partner', 'author', 'creator', 'maker', 'brand'])),
-    thumbnail: findImage(rec),
+    thumbnail,
+    imageUrl,
     // 실제로 열리는 데모 페이지. 블록을 눈으로 확인하거나 캡처할 때 쓴다.
     previewUrl: pick(rec, ['preview', 'demo', 'previewUrl', 'previewURL', 'demoUrl']),
     // 블록이 무슨 일을 하는지 적힌 글. AI 가 블록을 고를 때 가장 크게 참고한다.
