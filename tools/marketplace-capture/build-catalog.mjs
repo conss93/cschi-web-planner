@@ -35,13 +35,18 @@ function extractRecords(payload) {
       : r));
 }
 
-/** Strapi 미디어 필드는 중첩이 깊고 버전마다 달라서, 안에서 URL 을 찾아 꺼낸다. */
+// 이미지를 담고 있을 법한 필드 이름. 실제 이름을 모르므로 넓게 잡는다.
+const IMAGE_KEY = /thumb|image|preview|cover|media|screenshot|capture|poster/i;
+
+/**
+ * Strapi 미디어 필드는 중첩이 깊고 버전마다 다르다. 안에서 URL 을 찾아 꺼낸다.
+ * CDN 주소는 확장자가 없는 경우가 흔해서, 이미지로 보이는 필드 안에 있으면
+ * 확장자를 따지지 않고 URL 로 인정한다.
+ */
 function mediaUrl(node, depth = 0) {
-  if (!node || depth > 5) return null;
+  if (!node || depth > 6) return null;
   if (typeof node === 'string') {
-    return /^https?:\/\/|^\//.test(node) && /\.(png|jpe?g|webp|gif|avif|svg)/i.test(node)
-      ? node
-      : null;
+    return /^(https?:\/\/|\/)\S+$/.test(node.trim()) ? node.trim() : null;
   }
   if (Array.isArray(node)) {
     for (const item of node) {
@@ -52,12 +57,24 @@ function mediaUrl(node, depth = 0) {
   }
   if (typeof node !== 'object') return null;
 
-  if (typeof node.url === 'string') return node.url;
-  for (const key of ['data', 'attributes', 'formats', 'medium', 'large', 'small', 'thumbnail']) {
+  for (const key of ['url', 'src', 'href']) {
+    if (typeof node[key] === 'string' && node[key].trim()) return node[key].trim();
+  }
+  for (const key of ['data', 'attributes', 'formats', 'large', 'medium', 'small', 'thumbnail']) {
     if (node[key]) {
       const found = mediaUrl(node[key], depth + 1);
       if (found) return found;
     }
+  }
+  return null;
+}
+
+/** 필드 이름을 모르므로, 이미지처럼 보이는 필드를 전부 훑어 첫 URL 을 쓴다. */
+function findImage(rec) {
+  for (const [key, value] of Object.entries(rec)) {
+    if (!IMAGE_KEY.test(key)) continue;
+    const found = mediaUrl(value);
+    if (found) return found;
   }
   return null;
 }
@@ -90,6 +107,26 @@ function relationNames(node, depth = 0, acc = []) {
 
 /** 값이 하나뿐인 관계 (제작자 등). */
 const relationName = (node) => relationNames(node)[0] ?? null;
+
+/** 원본 필드가 어떻게 생겼는지 한 줄로 요약한다. 정규화가 놓친 필드를 찾기 위한 것. */
+function describe(value, depth = 0) {
+  if (value === null || value === undefined) return 'null';
+  if (typeof value === 'string') {
+    const s = value.length > 44 ? `${value.slice(0, 44)}…` : value;
+    return `"${s}"`;
+  }
+  if (typeof value !== 'object') return String(value);
+  if (Array.isArray(value)) {
+    return value.length && depth < 2 ? `[${value.length}개: ${describe(value[0], depth + 1)}]` : `[${value.length}개]`;
+  }
+  const keys = Object.keys(value);
+  if (depth >= 2) return `{${keys.slice(0, 4).join(', ')}${keys.length > 4 ? ', …' : ''}}`;
+  // data/attributes 는 Strapi 의 껍데기라 한 겹 벗겨야 내용이 보인다.
+  if (keys.length <= 2 && (keys.includes('data') || keys.includes('attributes'))) {
+    return `{${keys[0]}: ${describe(value[keys[0]], depth + 1)}}`;
+  }
+  return `{${keys.slice(0, 6).join(', ')}${keys.length > 6 ? ', …' : ''}}`;
+}
 
 const pick = (rec, keys) => {
   for (const k of keys) {
@@ -159,9 +196,7 @@ function normalizeBlock(rec, categoryHint) {
     officialPartner: tags.includes(PARTNER_TAG),
     tags: otherTags,
     author: relationName(pick(rec, ['author', 'creator', 'maker', 'partner', 'brand'])),
-    thumbnail: mediaUrl(
-      pick(rec, ['thumbnail', 'thumb', 'previewImage', 'previewImageUrl', 'image', 'cover', 'media']),
-    ),
+    thumbnail: findImage(rec),
     previewUrl: pick(rec, ['previewUrl', 'previewURL', 'demoUrl', 'url', 'slug']),
     description: pick(rec, ['description', 'summary', 'desc']),
   };
@@ -187,10 +222,12 @@ async function main() {
 
   const blocks = new Map();
   const categories = new Map();
+  const fieldSamples = new Map();   // 원본에 실제로 있는 필드 → 값의 생김새
   let blockFiles = 0;
   let categoryFiles = 0;
   let sampleBlock = null;
   let sampleCategory = null;
+  let reportedTotal = null;
 
   for (const res of manifest.responses) {
     const isBlocks = /\/api\/blocks\b/.test(res.url);
@@ -226,9 +263,18 @@ async function main() {
 
     blockFiles++;
     sampleBlock ??= records[0];
+    reportedTotal ??= payload?.meta?.pagination?.total ?? null;
     const hint = categoryHintFromUrl(res.url);
 
     for (const rec of records) {
+      // 값이 들어있는 필드를 우선 기록한다. 빈 값만 본 필드는 나중에 덮인다.
+      for (const [k, v] of Object.entries(rec)) {
+        const isEmpty = v === null || v === undefined || v === '';
+        if (!fieldSamples.has(k) || (fieldSamples.get(k) === 'null' && !isEmpty)) {
+          fieldSamples.set(k, describe(v));
+        }
+      }
+
       const block = normalizeBlock(rec, hint);
       if (!block?.blockId) continue;
 
@@ -285,6 +331,8 @@ async function main() {
         categories: [...categories.values()],
         blocks: all,
         // 정규화가 놓친 필드가 없는지 확인하려고 원본 레코드를 하나씩 남긴다.
+        _fields: Object.fromEntries([...fieldSamples].sort()),
+        _reportedTotal: reportedTotal,
         _sampleRawBlock: sampleBlock,
         _sampleRawCategory: sampleCategory,
       },
@@ -324,11 +372,20 @@ async function main() {
     for (const [k, v] of tags.slice(0, 15)) console.log(`  ${String(v).padStart(4)}  ${k}`);
   }
 
+  if (reportedTotal != null && reportedTotal !== all.length) {
+    console.log(`\n※ API 는 전체 ${reportedTotal}개라고 하는데 ${all.length}개만 모였습니다.`);
+  }
+
   const gaps = Object.entries(missing).filter(([, v]) => v > 0);
   if (gaps.length) {
     console.log('\n비어있는 필드:');
     for (const [k, v] of gaps) console.log(`  ${String(v).padStart(4)}  ${k}`);
-    console.log('  → 원본 모양을 봐야 합니다. 파일 안 _sampleRawBlock 을 확인하세요.');
+
+    // 어떤 필드가 실제로 있는지 보여준다. 이름을 몰라 못 읽은 필드를 여기서 찾는다.
+    console.log('\n원본 레코드에 있는 필드:');
+    for (const [k, v] of [...fieldSamples].sort()) {
+      console.log(`  ${k.padEnd(22)} ${v}`);
+    }
   }
 
   console.log(`\n저장: ${path.relative(ROOT, path.join(DATA, 'sixshop-blocks.json'))}`);

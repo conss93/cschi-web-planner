@@ -41,9 +41,11 @@ function makeBlockPage(page) {
           ],
         },
         author: { data: { attributes: { name: '어쎔블네트웍스' } } },
-        thumbnail: {
-          data: { attributes: { url: `https://example.test/thumb/${n}.png`, formats: {} } },
-        },
+        // 절반은 Strapi 미디어 관계로, 절반은 확장자 없는 CDN 주소 문자열로 준다.
+        // 실제로 어느 쪽인지 모르는 채로 양쪽을 다 읽어낼 수 있어야 한다.
+        ...(n % 2 === 0
+          ? { thumbnail: { data: { attributes: { url: `https://example.test/thumb/${n}.png`, formats: {} } } } }
+          : { blockPreviewImage: `https://cdn.example.test/i/${n}abc` }),
       },
     };
   });
@@ -159,6 +161,10 @@ async function main() {
   check('스타일 태그가 카테고리에 섞이지 않음', cat.blocks.every((b) => b.categories.every((c) => CATEGORIES.includes(c))));
   check('중첩된 제작자 관계를 풀어냄', sample?.author === '어쎔블네트웍스');
   check('중첩된 미디어에서 썸네일 URL 추출', sample?.thumbnail === 'https://example.test/thumb/0.png');
+  check(
+    '이름 모르는 필드의 확장자 없는 CDN 주소도 인식',
+    cat.blocks.find((b) => b.blockId === 'blk_1')?.thumbnail === 'https://cdn.example.test/i/1abc',
+  );
   check('빈 썸네일 없음', cat.blocks.every((b) => b.thumbnail));
   check('빈 카테고리 없음', cat.blocks.every((b) => b.categories.length));
   check(`스타일 ${STYLES.length}종 모두 인식`, Object.keys(cat.counts.byStyle).length === STYLES.length);
