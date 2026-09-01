@@ -8,12 +8,18 @@
     "capture": "node tools/marketplace-capture/capture.mjs",
     "fetch": "node tools/marketplace-capture/fetch-blocks.mjs",
     "catalog": "node tools/marketplace-capture/build-catalog.mjs",
-    "selftest": "node tools/marketplace-capture/selftest.mjs"
+    "selftest": "node tools/marketplace-capture/selftest.mjs",
+    "plan": "node bin/plan.mjs",
+    "test:pipeline": "node tools/pipeline/selftest.mjs"
   },
   "devDependencies": {
     "playwright": "^1.49.0"
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.122.0",
+    "zod": "^4.5.4"
   }
 }
