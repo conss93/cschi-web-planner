@@ -32,8 +32,13 @@ function makeBlockPage(page) {
         blockId: `blk_${n}`,
         name: `테스트 블록 ${n} (${STYLES[n % STYLES.length]})`,
         publishedAt: '2026-01-01T00:00:00.000Z',
+        // 실제 마켓플레이스는 카테고리·스타일·등급을 한 필드에 섞어서 준다.
         blockCategory: {
-          data: { id: (n % CATEGORIES.length) + 1, attributes: { name: CATEGORIES[n % CATEGORIES.length] } },
+          data: [
+            { attributes: { name: STYLES[n % STYLES.length].toLowerCase() } },
+            { attributes: { name: '프리미어' } },
+            { attributes: { name: CATEGORIES[n % CATEGORIES.length] } },
+          ],
         },
         author: { data: { attributes: { name: '어쎔블네트웍스' } } },
         thumbnail: {
@@ -147,14 +152,17 @@ async function main() {
   check('중복 없음', new Set(cat.blocks.map((b) => b.blockId)).size === cat.blocks.length);
 
   const sample = cat.blocks.find((b) => b.blockId === 'blk_0');
-  check('이름에서 스타일 분리 (Natural)', sample?.style === 'Natural');
+  check('스타일 인식 (Natural)', sample?.style === 'Natural');
   check('이름에서 스타일 떼어낸 본체', sample?.baseName === '테스트 블록 0');
-  check('중첩된 카테고리 관계를 풀어냄', sample?.category === '메인 배너');
+  check('뒤섞인 태그에서 카테고리만 골라냄', JSON.stringify(sample?.categories) === JSON.stringify(['메인 배너']));
+  check('카테고리도 스타일도 아닌 태그는 따로 분류', JSON.stringify(sample?.tags) === JSON.stringify(['프리미어']));
+  check('스타일 태그가 카테고리에 섞이지 않음', cat.blocks.every((b) => b.categories.every((c) => CATEGORIES.includes(c))));
   check('중첩된 제작자 관계를 풀어냄', sample?.author === '어쎔블네트웍스');
   check('중첩된 미디어에서 썸네일 URL 추출', sample?.thumbnail === 'https://example.test/thumb/0.png');
   check('빈 썸네일 없음', cat.blocks.every((b) => b.thumbnail));
-  check('빈 카테고리 없음', cat.blocks.every((b) => b.category));
+  check('빈 카테고리 없음', cat.blocks.every((b) => b.categories.length));
   check(`스타일 ${STYLES.length}종 모두 인식`, Object.keys(cat.counts.byStyle).length === STYLES.length);
+  check('카테고리 집계가 5개로 유지됨', Object.keys(cat.counts.byCategory).length === CATEGORIES.length);
 
   await fs.rm(TMP, { recursive: true, force: true });
   console.log(failures === 0 ? '\n전부 통과\n' : `\n실패 ${failures}건\n`);

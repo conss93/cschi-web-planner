@@ -62,27 +62,34 @@ function mediaUrl(node, depth = 0) {
   return null;
 }
 
-/** 관계 필드에서 사람이 읽을 이름을 꺼낸다 (카테고리, 제작자 등). */
-function relationName(node, depth = 0) {
-  if (!node || depth > 4) return null;
-  if (typeof node === 'string') return node;
-  if (Array.isArray(node)) {
-    const names = node.map((n) => relationName(n, depth + 1)).filter(Boolean);
-    return names.length ? names.join(', ') : null;
+/** 관계 필드에서 사람이 읽을 이름들을 꺼낸다. 값이 여러 개일 수 있다. */
+function relationNames(node, depth = 0, acc = []) {
+  if (!node || depth > 5) return acc;
+  if (typeof node === 'string') {
+    const s = node.trim();
+    if (s) acc.push(s);
+    return acc;
   }
-  if (typeof node !== 'object') return null;
+  if (Array.isArray(node)) {
+    for (const item of node) relationNames(item, depth + 1, acc);
+    return acc;
+  }
+  if (typeof node !== 'object') return acc;
 
   for (const key of ['name', 'title', 'label', 'displayName', 'nickname']) {
-    if (typeof node[key] === 'string') return node[key];
-  }
-  for (const key of ['data', 'attributes']) {
-    if (node[key]) {
-      const found = relationName(node[key], depth + 1);
-      if (found) return found;
+    if (typeof node[key] === 'string' && node[key].trim()) {
+      acc.push(node[key].trim());
+      return acc;
     }
   }
-  return null;
+  for (const key of ['data', 'attributes']) {
+    if (node[key]) relationNames(node[key], depth + 1, acc);
+  }
+  return acc;
 }
+
+/** 값이 하나뿐인 관계 (제작자 등). */
+const relationName = (node) => relationNames(node)[0] ?? null;
 
 const pick = (rec, keys) => {
   for (const k of keys) {
@@ -91,12 +98,33 @@ const pick = (rec, keys) => {
   return null;
 };
 
+// 마켓플레이스는 카테고리·스타일·등급을 한 태그 필드에 섞어서 준다.
+// 사이드바에 실제로 있는 이름만 카테고리로 인정하고 나머지는 따로 분류한다.
+const CATEGORY_NAMES = new Set([
+  '상품', '리뷰', '프로모션/혜택',
+  '헤더', '푸터', '메뉴/검색',
+  '메인 배너', '띠배너', '갤러리', '정보/소개/FAQ', '게시판/블로그',
+  '인스타그램', '폼', '지도', '팝업',
+]);
+
+// 블록 이름 끝의 (Natural) 표기와 태그로 동시에 나타나는 톤 이름.
+// Clam 은 Calm 의 오타로 보이지만 원본을 함부로 고치지 않고 그대로 둔다.
+const STYLE_NAMES = new Set([
+  'natural', 'fresh', 'calm', 'bubble', 'healthy', 'luminous', 'pop', 'soft', 'clear', 'clam',
+]);
+
+const titleCase = (s) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+
 /** 블록 이름 끝의 (Natural), (Calm) 같은 톤 표기를 떼어낸다. */
 function splitStyle(name) {
   if (typeof name !== 'string') return { baseName: null, style: null };
   const m = name.match(/^(.*?)\s*\(([A-Za-z][A-Za-z0-9 ]*)\)\s*$/);
-  return m
-    ? { baseName: m[1].trim(), style: m[2].trim() }
+  if (!m) return { baseName: name.trim(), style: null };
+
+  // 괄호 안이 톤 이름일 때만 스타일로 본다. (Fresh) 는 맞고 (business) 는 아니다.
+  const inner = m[2].trim();
+  return STYLE_NAMES.has(inner.toLowerCase())
+    ? { baseName: m[1].trim(), style: titleCase(inner) }
     : { baseName: name.trim(), style: null };
 }
 
@@ -104,20 +132,31 @@ function normalizeBlock(rec, categoryHint) {
   const name = pick(rec, ['name', 'title', 'blockName']);
   if (!name) return null;
 
-  const { baseName, style } = splitStyle(name);
-  const category =
-    relationName(pick(rec, ['blockCategory', 'block_category', 'category', 'categories'])) ??
-    categoryHint ??
-    null;
+  const tags = relationNames(
+    pick(rec, ['blockCategories', 'blockCategory', 'block_category', 'categories', 'category', 'tags']),
+  );
+  if (categoryHint) tags.push(categoryHint);
+
+  const categories = [...new Set(tags.filter((t) => CATEGORY_NAMES.has(t)))];
+  const styleTags = tags.filter((t) => STYLE_NAMES.has(t.toLowerCase()));
+  const otherTags = [...new Set(
+    tags.filter((t) => !CATEGORY_NAMES.has(t) && !STYLE_NAMES.has(t.toLowerCase())),
+  )];
+
+  const fromName = splitStyle(name);
 
   return {
     blockId: pick(rec, ['blockId', 'block_id', 'documentId', 'uid', 'id']),
     name,
-    baseName,
-    style,
-    category,
+    baseName: fromName.baseName,
+    // 태그로 붙은 톤이 이름에서 뽑은 것보다 믿을 만하다.
+    style: styleTags.length ? titleCase(styleTags[0]) : fromName.style,
+    categories,
+    tags: otherTags,
     author: relationName(pick(rec, ['author', 'creator', 'maker', 'partner', 'brand'])),
-    thumbnail: mediaUrl(pick(rec, ['thumbnail', 'thumb', 'previewImage', 'image', 'cover', 'media'])),
+    thumbnail: mediaUrl(
+      pick(rec, ['thumbnail', 'thumb', 'previewImage', 'previewImageUrl', 'image', 'cover', 'media']),
+    ),
     previewUrl: pick(rec, ['previewUrl', 'previewURL', 'demoUrl', 'url', 'slug']),
     description: pick(rec, ['description', 'summary', 'desc']),
   };
@@ -190,9 +229,13 @@ async function main() {
 
       const existing = blocks.get(block.blockId);
       if (existing) {
-        // 카테고리를 좁혀 조회한 응답이 더 정확하므로, 비어있던 값만 채운다.
+        // 같은 블록이 여러 응답에 나온다. 배열은 합치고, 나머지는 빈 값만 채운다.
         for (const [k, v] of Object.entries(block)) {
-          if (existing[k] == null && v != null) existing[k] = v;
+          if (Array.isArray(v)) {
+            existing[k] = [...new Set([...(existing[k] ?? []), ...v])];
+          } else if (existing[k] == null && v != null) {
+            existing[k] = v;
+          }
         }
       } else {
         blocks.set(block.blockId, block);
@@ -201,14 +244,19 @@ async function main() {
   }
 
   const all = [...blocks.values()].sort((a, b) =>
-    (a.category ?? '').localeCompare(b.category ?? '') || a.name.localeCompare(b.name),
+    (a.categories[0] ?? '').localeCompare(b.categories[0] ?? '') || a.name.localeCompare(b.name),
   );
 
   const byCategory = {};
   const byStyle = {};
+  const byTag = {};
   for (const b of all) {
-    byCategory[b.category ?? '(미분류)'] = (byCategory[b.category ?? '(미분류)'] ?? 0) + 1;
+    // 한 블록이 여러 카테고리에 속할 수 있어 합계가 블록 수보다 클 수 있다.
+    for (const c of b.categories.length ? b.categories : ['(미분류)']) {
+      byCategory[c] = (byCategory[c] ?? 0) + 1;
+    }
     if (b.style) byStyle[b.style] = (byStyle[b.style] ?? 0) + 1;
+    for (const t of b.tags) byTag[t] = (byTag[t] ?? 0) + 1;
   }
 
   await fs.mkdir(DATA, { recursive: true });
@@ -218,7 +266,7 @@ async function main() {
       {
         source: 'marketplace.sixshop.io/api/blocks (Strapi)',
         builtAt: new Date().toISOString(),
-        counts: { blocks: all.length, categories: categories.size, byCategory, byStyle },
+        counts: { blocks: all.length, categories: categories.size, byCategory, byStyle, byTag },
         categories: [...categories.values()],
         blocks: all,
         // 정규화가 놓친 필드가 없는지 확인하려고 원본 레코드를 하나씩 남긴다.
@@ -232,7 +280,8 @@ async function main() {
 
   const missing = {
     thumbnail: all.filter((b) => !b.thumbnail).length,
-    category: all.filter((b) => !b.category).length,
+    category: all.filter((b) => !b.categories.length).length,
+    style: all.filter((b) => !b.style).length,
     author: all.filter((b) => !b.author).length,
   };
 
@@ -249,6 +298,12 @@ async function main() {
     for (const [k, v] of Object.entries(byStyle).sort((a, b) => b[1] - a[1])) {
       console.log(`  ${String(v).padStart(4)}  ${k}`);
     }
+  }
+
+  const tags = Object.entries(byTag).sort((a, b) => b[1] - a[1]);
+  if (tags.length) {
+    console.log('\n그 밖의 태그 (카테고리도 스타일도 아닌 것):');
+    for (const [k, v] of tags.slice(0, 15)) console.log(`  ${String(v).padStart(4)}  ${k}`);
   }
 
   const gaps = Object.entries(missing).filter(([, v]) => v > 0);
