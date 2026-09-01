@@ -25,7 +25,11 @@ npm install
 ```
 
 모델 호출에 자격증명이 필요하다. `ANTHROPIC_API_KEY` 를 환경변수로 두거나
-`ant auth login` 으로 로그인한다.
+`ant auth login` 으로 로그인한다. 키는 셸이나 `.env` 에만 두고
+문서·대화·커밋에 남기지 않는다. 노출되면 즉시 콘솔에서 폐기하고 새로 발급한다.
+
+저장소에 들어 있는 `data/sixshop-blocks.json` 은 스냅샷이다. 마켓플레이스에
+블록이 추가되거나 썸네일 크기를 정확히 맞추려면 `npm run catalog` 로 다시 만든다.
 
 ## 쓰는 법
 
