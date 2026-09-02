@@ -14,7 +14,7 @@ import { loadCatalog } from '../../src/catalog-file.mjs';
 import { renderBlockMenu, renderStyleTable } from '../../src/catalog.mjs';
 import { runPipeline } from '../../src/pipeline.mjs';
 import { renderPlan } from '../../src/render.mjs';
-import { nextStage, pendingPageStages, assemble } from '../../lib/runner.mjs';
+import { nextStage, pendingPageStages, assemble, findDuplicates } from '../../lib/runner.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
 const FAKE_ID = '00000000-없는-블록-0000-000000000000';
@@ -80,8 +80,10 @@ function makeFakeModel(catalog) {
           menu: ['홈', '소개', '서비스', '상담'],
           menuNote: '메뉴는 4개로 제한합니다.',
           pages: [
-            { slug: '/', title: '홈', goal: '30초 안에 문의까지', summary: '요약 페이지', inMenu: true },
-            { slug: '/contact', title: '상담 안내', goal: '문의 제출', summary: '문의 페이지', inMenu: true },
+            { slug: '/', title: '홈', goal: '30초 안에 문의까지', summary: '요약 페이지', inMenu: true,
+              covers: ['서비스 요약'], avoid: ['문의 폼 — 상담 안내 페이지가 맡음'] },
+            { slug: '/contact', title: '상담 안내', goal: '문의 제출', summary: '문의 페이지', inMenu: true,
+              covers: ['문의 폼'], avoid: ['서비스 상세 — 홈이 맡음'] },
           ],
         };
       } else if (stage.startsWith('페이지 구성')) {
@@ -222,6 +224,10 @@ async function main() {
   check('배치 횟수는 4회', built.counts.placements === 4);
   check('톤 커스텀은 종류로 세어 1종', built.counts.customTone === 1);
   check('페이지 수는 그대로 2개', built.counts.pages === 2);
+
+  check('본문에 겹친 블록만 중복으로 잡음', built.duplicates.length === 1);
+  check('헤더·푸터는 중복에서 빠짐', !built.duplicates.join().includes('헤더'));
+  check('중복에 어느 페이지인지 적힘', built.duplicates[0]?.includes('본문 A'));
 
   const gHtml = renderPlan(built);
   check('화면에 전 페이지 공통 묶음이 나옴', gHtml.includes('전 페이지 공통'));

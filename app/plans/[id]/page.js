@@ -143,6 +143,14 @@ export default function PlanPage({ params }) {
               실재하지 않는 블록 {plan.data.problems.length}건을 걸러냈습니다.
             </p>
           )}
+          {plan.data.duplicates?.length > 0 && (
+            <details className="notice noprint">
+              <summary>여러 페이지에 겹쳐 들어간 블록 {plan.data.duplicates.length}건</summary>
+              <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
+                {plan.data.duplicates.map((d) => <li key={d}>{d}</li>)}
+              </ul>
+            </details>
+          )}
           <div dangerouslySetInnerHTML={{ __html: renderPlan(plan.data, { standalone: false }) }} />
         </>
       )}
