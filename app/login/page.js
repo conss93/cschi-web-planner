@@ -30,7 +30,16 @@ export default function LoginPage() {
 
   return (
     <div className="shell" style={{ maxWidth: 380, paddingTop: 120 }}>
-      <h1 style={{ fontFamily: 'var(--serif)', fontSize: 22, marginBottom: 24 }}>
+      <h1
+        style={{
+          fontFamily: 'var(--display)',
+          fontSize: 40,
+          fontWeight: 600,
+          lineHeight: 1.1,
+          letterSpacing: '-0.02em',
+          marginBottom: 32,
+        }}
+      >
         웹사이트 기획 에이전트
       </h1>
       <form onSubmit={submit}>
