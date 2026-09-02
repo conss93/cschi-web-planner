@@ -17,6 +17,7 @@ export default function PlanPage({ params }) {
   const [plan, setPlan] = useState(null);
   const [stage, setStage] = useState(null);
   const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
   const running = useRef(false);
 
   const load = useCallback(async () => {
@@ -84,6 +85,24 @@ export default function PlanPage({ params }) {
     drive();
   }, [drive]);
 
+  // 같은 상담 내용으로 다시 만든다. 이전 기획서는 그대로 두어 비교할 수 있다.
+  const regenerate = useCallback(async () => {
+    if (!plan?.brief_text) return;
+    setBusy(true);
+    const res = await fetch('/api/plans', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ briefText: plan.brief_text }),
+    });
+    if (!res.ok) {
+      setError('새로 만들지 못했습니다.');
+      setBusy(false);
+      return;
+    }
+    const created = await res.json();
+    location.href = `/plans/${created.id}`;
+  }, [plan]);
+
   if (!plan) return <div className="shell"><p style={{ paddingTop: 40 }}>불러오는 중…</p></div>;
 
   if (error) {
@@ -100,7 +119,12 @@ export default function PlanPage({ params }) {
             ? `여기까지 만든 내용은 남아 있습니다. 페이지 ${madePages}개까지 완성됐고, 이어서 만들면 멈춘 지점부터 계속합니다.`
             : '이어서 만들면 멈춘 지점부터 계속합니다.'}
         </p>
-        <button className="btn" onClick={resume}>이어서 만들기</button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn" onClick={resume}>이어서 만들기</button>
+          <button className="btn ghost" onClick={regenerate} disabled={busy}>
+            {busy ? '만드는 중' : '처음부터 다시'}
+          </button>
+        </div>
       </div>
     );
   }
@@ -116,6 +140,11 @@ export default function PlanPage({ params }) {
           <a href="/">목록</a>
           {done && <a href={`/share/${plan.share_token}`} target="_blank" rel="noreferrer">공유 링크</a>}
           {done && <button className="btn ghost" onClick={() => print()}>인쇄 · PDF</button>}
+          {done && (
+            <button className="btn ghost" onClick={regenerate} disabled={busy}>
+              {busy ? '만드는 중' : '같은 내용으로 다시'}
+            </button>
+          )}
         </nav>
       </header>
 
