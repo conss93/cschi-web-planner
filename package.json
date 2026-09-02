@@ -9,7 +9,7 @@
     "fetch": "node tools/marketplace-capture/fetch-blocks.mjs",
     "catalog": "node tools/marketplace-capture/build-catalog.mjs",
     "selftest": "node tools/marketplace-capture/selftest.mjs",
-    "plan": "node bin/plan.mjs",
+    "plan": "node --env-file-if-exists=.env.local bin/plan.mjs",
     "test:pipeline": "node tools/pipeline/selftest.mjs",
     "dev": "next dev",
     "build": "next build",
