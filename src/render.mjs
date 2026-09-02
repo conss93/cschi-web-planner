@@ -249,6 +249,9 @@ display:flex;flex-wrap:wrap;gap:8px 24px}
       <p class="sub">${esc(p.summary)}</p></div></li>`,
     )
     .join('')}</ul></div>
+  ${architecture.pageCountRationale
+    ? `<h3>페이지를 이렇게 나눈 이유</h3><p>${esc(architecture.pageCountRationale)}</p>`
+    : ''}
   <h3>메뉴 구조</h3>
   <p class="lead">${esc(architecture.menu.join(' · '))}</p>
   <p class="lead">${esc(architecture.menuNote)}</p>

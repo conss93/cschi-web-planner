@@ -79,6 +79,7 @@ function makeFakeModel(catalog) {
         value = {
           menu: ['홈', '소개', '서비스', '상담'],
           menuNote: '메뉴는 4개로 제한합니다.',
+          pageCountRationale: '서비스가 하나라 상세를 따로 두지 않고 홈에 넣었습니다.',
           pages: [
             { slug: '/', title: '홈', goal: '30초 안에 문의까지', summary: '요약 페이지', inMenu: true,
               covers: ['서비스 요약'], avoid: ['문의 폼 — 상담 안내 페이지가 맡음'] },
@@ -160,6 +161,7 @@ async function main() {
   check('블록 이름이 화면에 나옴', html.includes(plan.pages[0].sections[0].blockName));
   check('기본 기능 자리를 따로 표시', html.includes('식스샵 기본 기능'));
   check('확인할 질문이 실림', html.includes('주력 고객층은?'));
+  check('페이지 수의 근거가 실림', html.includes('페이지를 이렇게 나눈 이유'));
   check('기술 검토 섹션이 있음', html.includes('기술 검토'));
   check('밝은 테마 색이 정의됨', html.includes(':root{--paper:'));
   check('어두운 테마도 정의됨', html.includes('prefers-color-scheme:dark'));
