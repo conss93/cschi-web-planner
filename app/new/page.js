@@ -44,15 +44,21 @@ function Field({ field, value, onChange }) {
   );
 }
 
+const filled = (values) =>
+  Object.values(values ?? {}).filter((v) => (Array.isArray(v) ? v.length : String(v ?? '').trim()))
+    .length;
+
 export default function NewPlanPage() {
   const [values, setValues] = useState({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [loaded, setLoaded] = useState(false);
   const [from, setFrom] = useState(null);
+  // 쓰다 만 내용이 있으면 여기에 담아 두고 물어본다. 폼에 바로 채우지는 않는다.
+  const [draft, setDraft] = useState(null);
   const submitting = useRef(false);
 
-  // 작성 중인 내용을 이 브라우저에 남긴다. 실수로 나가도 돌아오면 그대로다.
+  // 작성 중인 내용을 이 브라우저에 남긴다. 실수로 나가도 되살릴 수 있다.
   useEffect(() => {
     const from = new URLSearchParams(location.search).get('from');
     setFrom(from);
@@ -70,9 +76,11 @@ export default function NewPlanPage() {
       return;
     }
 
+    // 새 기획서는 늘 빈 폼으로 연다. 쓰다 만 것이 있으면 되살릴지 물어본다.
     try {
       const saved = localStorage.getItem(DRAFT_KEY);
-      if (saved) setValues(JSON.parse(saved));
+      const parsed = saved ? JSON.parse(saved) : null;
+      if (filled(parsed)) setDraft(parsed);
     } catch {
       // 브라우저가 저장을 막아 둔 경우
     }
@@ -80,13 +88,24 @@ export default function NewPlanPage() {
   }, []);
 
   useEffect(() => {
-    if (!loaded) return;
+    // 아직 아무것도 안 썼으면 저장하지 않는다. 빈 폼이 이전 초안을 지우면 안 된다.
+    // 이전 기획서를 고치는 중이면 그 내용은 이미 서버에 있으므로 남기지 않는다.
+    if (!loaded || from || !filled(values)) return;
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify(values));
     } catch {
       // 저장 못 해도 작성은 계속된다
     }
-  }, [values, loaded]);
+  }, [values, loaded, from]);
+
+  function dropDraft() {
+    setDraft(null);
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      // 지우지 못해도 다음 작성에서 덮어쓴다
+    }
+  }
 
   const set = (id, value) => setValues((v) => ({ ...v, [id]: value }));
 
@@ -142,6 +161,28 @@ export default function NewPlanPage() {
         </p>
       )}
 
+      {draft && (
+        <div className="notice">
+          이 브라우저에 쓰다 만 상담 내용이 있습니다({filled(draft)}개 항목).
+          불러오지 않으면 빈 폼으로 시작합니다.
+          <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                setValues(draft);
+                setDraft(null);
+              }}
+            >
+              이어서 쓰기
+            </button>
+            <button type="button" className="btn ghost" onClick={dropDraft}>
+              지우고 새로 쓰기
+            </button>
+          </div>
+        </div>
+      )}
+
       <form
         onSubmit={submit}
         onKeyDown={(e) => {
@@ -177,7 +218,9 @@ export default function NewPlanPage() {
           {busy ? '만드는 중' : '기획서 만들기'}
         </button>
         <p style={{ color: 'var(--faint)', fontSize: 13, marginTop: 10 }}>
-          작성 중인 내용은 이 브라우저에 자동으로 저장됩니다. 나갔다 돌아와도 그대로입니다.
+          {from
+            ? '이 화면의 내용은 따로 저장되지 않습니다. 원래 기획서는 그대로 남아 있습니다.'
+            : '작성 중인 내용은 이 브라우저에 자동으로 저장됩니다. 나갔다 돌아오면 이어서 쓸지 물어봅니다.'}
         </p>
       </form>
     </div>
