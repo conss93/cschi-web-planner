@@ -15,6 +15,7 @@ import { renderBlockMenu, renderStyleTable } from '../../src/catalog.mjs';
 import { runPipeline } from '../../src/pipeline.mjs';
 import { renderPlan } from '../../src/render.mjs';
 import { nextStage, pendingPageStages, assemble, findDuplicates } from '../../lib/runner.mjs';
+import { toBriefText, parseBriefText, missingRequired } from '../../lib/brief-form.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
 const FAKE_ID = '00000000-없는-블록-0000-000000000000';
@@ -166,6 +167,35 @@ async function main() {
   check('밝은 테마 색이 정의됨', html.includes(':root{--paper:'));
   check('어두운 테마도 정의됨', html.includes('prefers-color-scheme:dark'));
   check('본문 배경을 직접 칠함', html.includes('background:var(--paper)'));
+
+  console.log('\n─── 상담 폼 ───');
+  const filled = {
+    companyName: '청새공조',
+    industry: '공조기 제작업체',
+    region: '전국',
+    primaryGoal: '상담·문의 접수',
+    targetCustomer: '기업 총무·시설 담당자',
+    toneWords: '전문적인, 신뢰감 있는',
+    neededFunctions: ['문의 폼', '지도'],
+    regulatedIndustry: ['해당 없음'],
+    rawNotes: '사이트가 아예 없고 블로그만 운영 중',
+  };
+
+  const text = toBriefText(filled);
+  check('상호가 텍스트에 들어감', text.includes('상호: 청새공조'));
+  check('여러 개 고른 항목은 쉼표로 합쳐짐', text.includes('필요한 기능: 문의 폼, 지도'));
+  check('못 채운 필수 항목을 따로 적음', text.includes('상담에서 확인하지 못한 항목'));
+
+  const back = parseBriefText(text);
+  check('되돌린 값에 상호가 살아 있음', back.companyName === '청새공조');
+  check('여러 개 고른 항목이 배열로 복원됨', JSON.stringify(back.neededFunctions) === JSON.stringify(['문의 폼', '지도']));
+  check('자유 메모가 살아 있음', back.rawNotes?.includes('블로그만 운영'));
+  check(
+    '채웠던 항목이 하나도 사라지지 않음',
+    Object.keys(filled).every((k) => back[k] !== undefined && String(back[k]).length > 0),
+  );
+  check('되돌린 값을 다시 텍스트로 만들면 같음', toBriefText(back) === text);
+  check('빈 값으로도 안 터짐', typeof toBriefText({}) === 'string' && missingRequired({}).length > 0);
 
   console.log('\n─── 동시 실행 ───');
   const arch = { pages: [{ title: 'A' }, { title: 'B' }, { title: 'C' }] };

@@ -1,34 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import form from '../../data/brief-form.json';
+import { form, toBriefText, parseBriefText, missingRequired } from '../../lib/brief-form.mjs';
 
 const DRAFT_KEY = 'planner:brief-draft';
-
-/** 폼 값을 파이프라인이 읽을 텍스트로 바꾼다. 빈 항목은 미확인으로 남긴다. */
-function toBriefText(values) {
-  const lines = [];
-  for (const section of form.sections) {
-    const entries = section.fields
-      .map((field) => [field, values[field.id]])
-      .filter(([, v]) => v && String(v).trim());
-
-    if (!entries.length) continue;
-    lines.push(`[${section.label}]`);
-    for (const [field, value] of entries) {
-      lines.push(`${field.label}: ${Array.isArray(value) ? value.join(', ') : value}`);
-    }
-    lines.push('');
-  }
-
-  const missing = form.sections
-    .flatMap((s) => s.fields)
-    .filter((f) => f.required && !String(values[f.id] ?? '').trim())
-    .map((f) => f.label);
-
-  if (missing.length) lines.push(`[상담에서 확인하지 못한 항목]\n${missing.join(', ')}`);
-  return lines.join('\n');
-}
 
 function Field({ field, value, onChange }) {
   const common = {
@@ -74,17 +49,21 @@ export default function NewPlanPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [loaded, setLoaded] = useState(false);
+  const [from, setFrom] = useState(null);
   const submitting = useRef(false);
 
   // 작성 중인 내용을 이 브라우저에 남긴다. 실수로 나가도 돌아오면 그대로다.
   useEffect(() => {
     const from = new URLSearchParams(location.search).get('from');
+    setFrom(from);
 
     if (from) {
       fetch(`/api/plans/${from}`)
         .then((r) => (r.ok ? r.json() : null))
         .then((row) => {
+          // 폼 값을 저장하기 전에 만든 기획서는 상담 텍스트에서 되살린다.
           if (row?.data?.form) setValues(row.data.form);
+          else if (row?.brief_text) setValues(parseBriefText(row.brief_text));
           setLoaded(true);
         })
         .catch(() => setLoaded(true));
@@ -111,9 +90,7 @@ export default function NewPlanPage() {
 
   const set = (id, value) => setValues((v) => ({ ...v, [id]: value }));
 
-  const missing = form.sections
-    .flatMap((s) => s.fields)
-    .filter((f) => f.required && !String(values[f.id] ?? '').trim());
+  const missing = missingRequired(values);
 
   async function submit(event) {
     event.preventDefault();
@@ -150,13 +127,20 @@ export default function NewPlanPage() {
     <div className="shell">
       <header className="topbar">
         <h1>새 기획서</h1>
-        <nav><a href="/">목록</a></nav>
+        <nav><a className="btn ghost" href="/">목록</a></nav>
       </header>
 
       <p style={{ color: 'var(--muted)', maxWidth: '62ch' }}>
         상담 중에 아는 만큼만 채우세요. 빈 항목이 있어도 만들 수 있습니다.
         빠진 것은 기획서 첫머리에 확인할 질문으로 올라갑니다.
       </p>
+
+      {from && loaded && (
+        <p className="notice">
+          이전 기획서의 상담 내용을 불러왔습니다. 빈칸을 채우거나 고친 뒤 다시 만드세요.
+          기존 기획서는 그대로 남습니다.
+        </p>
+      )}
 
       <form
         onSubmit={submit}

@@ -111,7 +111,7 @@ export default function PlanPage({ params }) {
       <div className="shell">
         <header className="topbar">
           <h1>{plan.company || '기획서'}</h1>
-          <nav><a href="/">목록</a></nav>
+          <nav><a className="btn ghost" href="/">목록</a></nav>
         </header>
         <p className="notice">{error}</p>
         <p style={{ color: 'var(--muted)' }}>
@@ -138,10 +138,14 @@ export default function PlanPage({ params }) {
       <header className="topbar noprint">
         <h1>{plan.company || '기획서'}</h1>
         <nav>
-          <a href="/">목록</a>
-          {done && <a href={`/share/${plan.share_token}`} target="_blank" rel="noreferrer">공유 링크</a>}
+          <a className="btn ghost" href="/">목록</a>
+          {done && (
+            <a className="btn ghost" href={`/share/${plan.share_token}`} target="_blank" rel="noreferrer">
+              공유 링크
+            </a>
+          )}
           {done && <button className="btn ghost" onClick={() => print()}>인쇄 · PDF</button>}
-          {done && <a href={`/new?from=${plan.id}`}>상담 내용 고쳐서 다시</a>}
+          {done && <a className="btn ghost" href={`/new?from=${plan.id}`}>상담 내용 고치기</a>}
           {done && (
             <button className="btn ghost" onClick={regenerate} disabled={busy}>
               {busy ? '만드는 중' : '같은 내용으로 다시'}
