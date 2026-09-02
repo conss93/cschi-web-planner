@@ -192,6 +192,41 @@ async function main() {
     assemble(state).pages.map((p) => p.title).join() === 'A,B,C',
   );
 
+  console.log('\n─── 전역 요소 ───');
+  // 헤더와 푸터가 두 페이지에 똑같이 들어간 상태
+  const withGlobals = {
+    brief: { companyName: '테스트', budget: '미확인', industry: '', region: '', scale: '',
+      existingChannels: '', primaryGoal: '', targetCustomer: '', toneWords: [], avoidTone: '',
+      deadline: '', regulated: '', assumptions: [], openQuestions: [] },
+    strategy: { positioning: '', singleGoal: '', audience: '', trustMaterials: [],
+      style: 'Calm', styleRationale: '', styleRunnerUp: '' },
+    architecture: { menu: [], menuNote: '', pages: [] },
+    advisories: { features: [], production: [], assetsToCollect: [], budgetNote: '', technical: [] },
+    pages: [
+      { index: 0, title: 'A', sections: [
+        { purpose: '헤더', blockId: 'h1', needsCustomTone: false },
+        { purpose: '본문 A', blockId: 'x1', needsCustomTone: true },
+        { purpose: '푸터', blockId: 'f1', needsCustomTone: false },
+      ] },
+      { index: 1, title: 'B', sections: [
+        { purpose: '헤더', blockId: 'h1', needsCustomTone: false },
+        { purpose: '본문 B', blockId: 'x1', needsCustomTone: true },
+        { purpose: '푸터', blockId: 'f1', needsCustomTone: false },
+      ] },
+    ],
+  };
+  const built = assemble(withGlobals);
+  check('맨 위·맨 아래 공통 블록만 전역으로 뺌', built.globals.map((g) => g.blockId).sort().join() === 'f1,h1');
+  check('여러 페이지에 나오는 본문 블록은 전역이 아님', built.pages.every((p) => p.sections.length === 1));
+  check('블록 종류는 3종 (헤더·본문·푸터)', built.counts.blocks === 3);
+  check('배치 횟수는 4회', built.counts.placements === 4);
+  check('톤 커스텀은 종류로 세어 1종', built.counts.customTone === 1);
+  check('페이지 수는 그대로 2개', built.counts.pages === 2);
+
+  const gHtml = renderPlan(built);
+  check('화면에 전 페이지 공통 묶음이 나옴', gHtml.includes('전 페이지 공통'));
+  check('헤더가 화면에 한 번만 나옴', (gHtml.match(/>헤더 /g) ?? []).length === 1);
+
   state = { ...state, advisories: { features: [] } };
   check('유의점 다음은 기술 검토', nextStage(state).key === 'technical');
   state = { ...state, technical: [{ area: '속도', items: [] }] };

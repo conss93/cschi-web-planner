@@ -59,6 +59,17 @@ const pageBlock = (page) => `
   </div>
   <ol class="strip">${page.sections.map(sectionRow).join('')}</ol>`;
 
+/** 모든 페이지에 같은 모습으로 들어가는 자리. 한 번만 보여주고 한 번만 센다. */
+const globalsBlock = (globals) =>
+  !globals?.length
+    ? ''
+    : `<div class="page-head">
+    <h3>전 페이지 공통</h3>
+    <span class="path">모든 페이지</span>
+    <span class="goal">한 번 만들어 모든 페이지에 씁니다</span>
+  </div>
+  <ol class="strip">${globals.map(sectionRow).join('')}</ol>`;
+
 /**
  * @param {object} plan
  * @param {object} [opts]
@@ -179,9 +190,10 @@ display:flex;flex-wrap:wrap;gap:8px 24px}
   <p class="standfirst">${esc(strategy.positioning)}</p>
   <dl class="factbar">
     <div class="fact"><dt>페이지</dt><dd>${counts.pages}</dd></div>
-    <div class="fact"><dt>지정 블록</dt><dd>${counts.blocks}개</dd></div>
+    <div class="fact"><dt>블록 종류</dt><dd>${counts.blocks}종</dd></div>
+    <div class="fact"><dt>배치 횟수</dt><dd>${counts.placements ?? counts.blocks}회</dd></div>
     <div class="fact"><dt>디자인 톤</dt><dd>${esc(strategy.style)} 계열</dd></div>
-    <div class="fact"><dt>커스텀 필요</dt><dd>${counts.customTone}건</dd></div>
+    <div class="fact"><dt>톤 커스텀</dt><dd>${counts.customTone}종</dd></div>
     <div class="fact"><dt>예산</dt><dd>${esc(brief.budget)}</dd></div>
   </dl>
 </header>
@@ -246,6 +258,7 @@ display:flex;flex-wrap:wrap;gap:8px 24px}
   <h2><span class="num">04</span>페이지 구성</h2>
   <p class="lead">각 줄이 하나의 블록입니다. ★는 식스샵 공식 파트너 블록,
   회색 칩은 스타일 계열이 없는 커뮤니티 블록입니다.</p>
+  ${globalsBlock(plan.globals)}
   ${pages.map(pageBlock).join('')}
 </section>
 
