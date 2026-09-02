@@ -1,9 +1,20 @@
 import { NextResponse } from 'next/server';
 import { getPlan, savePlan, appendPage } from '../../../../../lib/db.mjs';
-import { runStage, nextStage, pendingPageStages, summarize, assemble } from '../../../../../lib/runner.mjs';
+import {
+  runStage,
+  nextStage,
+  pendingPageStages,
+  summarize,
+  assemble,
+  alreadyDone,
+} from '../../../../../lib/runner.mjs';
 
-// 무료 플랜은 60초에서 잘린다. 단계를 그 안에 들어오도록 나눠 두었다.
-export const maxDuration = 60;
+/**
+ * 한 단계가 60초를 넘길 때가 있다. 페이지가 길거나 모델이 붐빌 때가 그렇다.
+ * Fluid compute 를 켜면 무료 플랜에서도 300초까지 붙들 수 있다.
+ * (Vercel 프로젝트 설정 → Functions → Fluid compute. 새 프로젝트는 기본으로 켜져 있다.)
+ */
+export const maxDuration = 300;
 
 export async function POST(request, { params }) {
   const { id } = await params;
@@ -16,6 +27,20 @@ export async function POST(request, { params }) {
   const key = body.stage ?? nextStage(plan.data)?.key ?? null;
   if (!key) {
     return NextResponse.json({ done: true, stage: null, counts: plan.data.counts ?? null });
+  }
+
+  // 이미 끝난 단계를 다시 요청받으면 모델을 부르지 않는다. 응답이 오는 길에
+  // 끊겨 화면이 같은 단계를 다시 보내는 일이 있는데, 그때 돈이 두 번 나간다.
+  if (alreadyDone(plan.data, key)) {
+    const remaining = nextStage(plan.data);
+    return NextResponse.json({
+      done: remaining === null,
+      ran: key,
+      skipped: true,
+      next: remaining,
+      pending: pendingPageStages(plan.data),
+      counts: assemble(plan.data).counts,
+    });
   }
 
   try {

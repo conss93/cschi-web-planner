@@ -35,15 +35,42 @@ export default function PlanPage({ params }) {
     if (running.current) return;
     running.current = true;
 
-    const step = async (key) => {
+    // 서버가 우리 오류를 돌려준 게 아니라 중간에서 끊긴 경우. 시간 제한이나
+    // 일시적인 네트워크 문제라 한 번은 다시 해 볼 값어치가 있다.
+    const cutOff = (res) => !res || res.status === 504 || res.status === 502 || res.status === 503;
+
+    const once = async (key) => {
       const res = await fetch(`/api/plans/${id}/stage`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(key ? { stage: key } : {}),
       });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body.error ?? '생성에 실패했습니다.');
-      return body;
+      const body = await res.json().catch(() => null);
+
+      if (res.ok && body) return body;
+
+      // 본문이 우리 JSON 이 아니면 서버 코드까지 닿지 못한 것이다.
+      if (!body || typeof body.error !== 'string') {
+        const err = new Error(
+          res.status === 504
+            ? '한 단계가 시간 제한을 넘겼습니다. 이어서 만들기를 누르면 멈춘 지점부터 계속합니다.'
+            : `서버가 응답하지 않았습니다 (${res.status}). 이어서 만들기를 눌러 보세요.`,
+        );
+        err.retryable = cutOff(res);
+        throw err;
+      }
+      throw new Error(body.error);
+    };
+
+    const step = async (key) => {
+      try {
+        return await once(key);
+      } catch (err) {
+        // fetch 자체가 실패한 경우(TypeError)도 한 번은 다시 해 본다.
+        if (!err.retryable && err.name !== 'TypeError') throw err;
+        await new Promise((r) => setTimeout(r, 2000));
+        return once(key);
+      }
     };
 
     try {
@@ -52,10 +79,22 @@ export default function PlanPage({ params }) {
         setStage(body.next ?? null);
         if (body.done) break;
 
-        // 페이지들은 서로 독립이라 남은 것을 한꺼번에 요청한다.
+        // 페이지들은 서로 독립이라 동시에 요청한다. 다만 한꺼번에 다 보내면
+        // 모델 쪽 한도에 걸려 오히려 느려지므로 세 개씩 끊어 보낸다.
         if (body.pending?.length) {
-          setStage({ label: '페이지 구성', progress: `${body.pending.length}개 동시 진행` });
-          await Promise.all(body.pending.map((p) => step(p.key)));
+          const queue = [...body.pending];
+          const total = queue.length;
+          let left = total;
+          setStage({ label: '페이지 구성', progress: `0/${total}` });
+
+          const worker = async () => {
+            for (let item = queue.shift(); item; item = queue.shift()) {
+              await step(item.key);
+              left--;
+              setStage({ label: '페이지 구성', progress: `${total - left}/${total}` });
+            }
+          };
+          await Promise.all(Array.from({ length: Math.min(3, total) }, worker));
         }
       }
     } catch (err) {
