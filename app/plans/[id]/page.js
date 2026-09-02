@@ -124,6 +124,7 @@ export default function PlanPage({ params }) {
           <button className="btn ghost" onClick={regenerate} disabled={busy}>
             {busy ? '만드는 중' : '처음부터 다시'}
           </button>
+          <a className="btn ghost" href={`/new?from=${plan.id}`}>상담 내용 고치기</a>
         </div>
       </div>
     );
@@ -140,6 +141,7 @@ export default function PlanPage({ params }) {
           <a href="/">목록</a>
           {done && <a href={`/share/${plan.share_token}`} target="_blank" rel="noreferrer">공유 링크</a>}
           {done && <button className="btn ghost" onClick={() => print()}>인쇄 · PDF</button>}
+          {done && <a href={`/new?from=${plan.id}`}>상담 내용 고쳐서 다시</a>}
           {done && (
             <button className="btn ghost" onClick={regenerate} disabled={busy}>
               {busy ? '만드는 중' : '같은 내용으로 다시'}
