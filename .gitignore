@@ -8,6 +8,8 @@ out/
 
 .env
 .env.*
+# 값이 비어 있는 견본은 저장소에 둔다. 위 규칙에 걸리므로 예외로 뺀다.
+!.env.example
 .DS_Store
 
 # Next.js
