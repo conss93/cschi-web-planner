@@ -11,6 +11,19 @@ import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 
 export const MODEL_ID = 'claude-opus-5';
 
+/** API 오류를 그대로 보여주면 무슨 일인지 알 수 없다. 흔한 것은 풀어서 쓴다. */
+function explain(err) {
+  const raw = err?.message ?? String(err);
+
+  if (err?.status === 401) return '인증에 실패했습니다. ANTHROPIC_API_KEY 를 확인하세요.';
+  if (err?.status === 429) return '요청이 한도를 넘었습니다. 잠시 뒤 이어서 만들기를 누르세요.';
+  if (/credit balance is too low/i.test(raw)) {
+    return 'API 크레딧이 부족합니다. 콘솔에서 충전한 뒤 이어서 만들기를 누르면 멈춘 지점부터 계속합니다.';
+  }
+  if (err?.status >= 500) return '모델 쪽 일시적인 오류입니다. 이어서 만들기를 다시 눌러 보세요.';
+  return raw;
+}
+
 export function createModel({ verbose = false } = {}) {
   const client = new Anthropic();
   const usage = { calls: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
@@ -34,16 +47,21 @@ export function createModel({ verbose = false } = {}) {
       }
 
       const started = Date.now();
-      const res = await client.messages.parse({
-        model: MODEL_ID,
-        max_tokens: 16000,
-        thinking: { type: 'adaptive' },
-        output_config: { effort, format: zodOutputFormat(schema) },
-        system,
-        messages: [{ role: 'user', content: task }],
-      });
+      let res;
+      try {
+        res = await client.messages.parse({
+          model: MODEL_ID,
+          max_tokens: 16000,
+          thinking: { type: 'adaptive' },
+          output_config: { effort, format: zodOutputFormat(schema) },
+          system,
+          messages: [{ role: 'user', content: task }],
+        });
+      } catch (err) {
+        throw new Error(`[${stage}] ${explain(err)}`);
+      }
 
-      if (res.stop_reason === 'refusal') {
+      if (res?.stop_reason === 'refusal') {
         throw new Error(`[${stage}] 모델이 응답을 거절했습니다: ${res.stop_details?.category ?? '사유 불명'}`);
       }
       if (!res.parsed_output) {

@@ -67,22 +67,43 @@ export default function PlanPage({ params }) {
 
   useEffect(() => {
     load().then((row) => {
-      if (row && row.status !== 'done') {
-        setStage({ label: row.stage || STEPS[0] });
-        drive();
+      if (!row || row.status === 'done') return;
+      // 실패한 채로 두면 자동 재시도가 크레딧을 모르는 새 써 버린다.
+      // 무엇 때문에 멈췄는지 보여주고 사람이 이어서 누르게 한다.
+      if (row.status === 'error') {
+        setError(row.error ?? '알 수 없는 이유로 멈췄습니다.');
+        return;
       }
+      setStage({ label: row.stage || STEPS[0] });
+      drive();
     });
   }, [load, drive]);
 
+  const resume = useCallback(() => {
+    setError('');
+    drive();
+  }, [drive]);
+
+  if (!plan) return <div className="shell"><p style={{ paddingTop: 40 }}>불러오는 중…</p></div>;
+
   if (error) {
+    const madePages = plan.data?.pages?.length ?? 0;
     return (
       <div className="shell">
-        <header className="topbar"><h1>기획서</h1><nav><a href="/">목록</a></nav></header>
+        <header className="topbar">
+          <h1>{plan.company || '기획서'}</h1>
+          <nav><a href="/">목록</a></nav>
+        </header>
         <p className="notice">{error}</p>
+        <p style={{ color: 'var(--muted)' }}>
+          {madePages > 0
+            ? `여기까지 만든 내용은 남아 있습니다. 페이지 ${madePages}개까지 완성됐고, 이어서 만들면 멈춘 지점부터 계속합니다.`
+            : '이어서 만들면 멈춘 지점부터 계속합니다.'}
+        </p>
+        <button className="btn" onClick={resume}>이어서 만들기</button>
       </div>
     );
   }
-  if (!plan) return <div className="shell"><p style={{ paddingTop: 40 }}>불러오는 중…</p></div>;
 
   const done = plan.status === 'done';
   const current = stepIndex(stage?.label ?? plan.stage);
