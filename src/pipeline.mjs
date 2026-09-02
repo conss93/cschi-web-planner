@@ -199,6 +199,8 @@ ${JSON.stringify(strategy, null, 1)}`,
 
 /* ── 5단계: 기능과 유의점 ─────────────────────────────────────── */
 
+// 한 번에 다 받으면 출력이 길어 100초를 넘긴다. 서버리스 함수가 버티는
+// 시간을 넘기므로 둘로 나눈다. 앞은 제작 진행, 뒤는 기술 점검.
 const AdvisorySchema = z.object({
   features: z.array(
     z.object({
@@ -214,14 +216,17 @@ const AdvisorySchema = z.object({
       detail: z.string(),
     }),
   ),
+  assetsToCollect: z.array(z.string()),
+  budgetNote: z.string(),
+});
+
+const TechnicalSchema = z.object({
   technical: z.array(
     z.object({
       area: z.string(),
       items: z.array(z.string()),
     }),
   ),
-  assetsToCollect: z.array(z.string()),
-  budgetNote: z.string(),
 });
 
 export async function stageAdvisories(model, { brief, strategy, pages, blockMenu }) {
@@ -242,10 +247,6 @@ production 은 제작 진행상 주의할 점 4~6개. mark 는 두세 글자 표
 (예: 전용, 부재, 톤, 규정, 유입). 이 업종과 이 구성에서만 나오는 이야기를
 쓰세요. 일반론은 빼십시오.
 
-technical 은 디자인·개발 관점의 점검 항목입니다. area 별로 묶고 items 에
-구체적인 실행 항목을 적습니다. 반응형, 속도, 접근성, 검색 노출, 폼, 측정을
-다루되 이 사이트에 해당하는 내용으로 적으세요.
-
 assetsToCollect 는 고객사에서 받아야 할 자료 목록.
 budgetNote 는 예산이 맞는지, 초과 요인이 무엇인지 두세 문장.
 
@@ -257,6 +258,38 @@ ${JSON.stringify(strategy, null, 1)}
 
 --- 배치한 섹션들 ---
 ${used.join('\n')}`,
+  });
+}
+
+/* ── 6단계: 기술 검토 ─────────────────────────────────────────── */
+
+export async function stageTechnical(model, { brief, strategy, pages, blockMenu }) {
+  const custom = pages.flatMap((p) =>
+    p.sections.filter((s) => s.needsCustomTone).map((s) => `${p.title}: ${s.purpose}`),
+  );
+
+  return model.generate({
+    stage: '기술 검토',
+    role: ROLE,
+    shared: blockMenu,
+    schema: TechnicalSchema,
+    task: `디자인·개발 관점에서 점검할 항목을 정리하세요.
+
+area 별로 묶고 items 에 구체적인 실행 항목을 적습니다. 반응형, 속도, 글꼴,
+접근성, 검색 노출, 폼, 측정과 인계를 다루되 **이 사이트에 해당하는 내용**으로
+적으세요. 어느 사이트에나 해당하는 일반론은 빼십시오.
+
+블록을 조립해 만드는 사이트라는 점을 감안하세요. 블록마다 자체 스크립트를
+불러오고, 스타일 계열이 없는 커뮤니티 블록은 모바일 대응이 보장되지 않습니다.
+
+--- 브리프 ---
+${JSON.stringify(brief, null, 1)}
+
+--- 톤 계열 ---
+${strategy.style}
+
+--- 톤 커스텀이 필요한 자리 ---
+${custom.length ? custom.join('\n') : '없음'}`,
   });
 }
 
@@ -317,6 +350,10 @@ export async function runPipeline({ model, catalog, briefText, onStage = () => {
 
   onStage('기능과 유의점');
   const advisories = await stageAdvisories(model, { brief, strategy, pages, blockMenu });
+
+  onStage('기술 검토');
+  const technical = await stageTechnical(model, { brief, strategy, pages, blockMenu });
+  advisories.technical = technical.technical;
 
   return {
     generatedAt: new Date().toISOString(),

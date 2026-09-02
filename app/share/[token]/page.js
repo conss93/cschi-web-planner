@@ -1,5 +1,6 @@
 import { getPlanByToken } from '../../../lib/db.mjs';
 import { renderPlan } from '../../../src/render.mjs';
+import { assemble } from '../../../lib/runner.mjs';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +26,7 @@ export default async function SharePage({ params }) {
 
   return (
     <div className="shell">
-      <div dangerouslySetInnerHTML={{ __html: renderPlan(plan.data, { standalone: false }) }} />
+      <div dangerouslySetInnerHTML={{ __html: renderPlan(assemble(plan.data), { standalone: false }) }} />
     </div>
   );
 }

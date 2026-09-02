@@ -14,6 +14,7 @@ import { loadCatalog } from '../../src/catalog-file.mjs';
 import { renderBlockMenu, renderStyleTable } from '../../src/catalog.mjs';
 import { runPipeline } from '../../src/pipeline.mjs';
 import { renderPlan } from '../../src/render.mjs';
+import { nextStage, pendingPageStages, assemble } from '../../lib/runner.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
 const FAKE_ID = '00000000-없는-블록-0000-000000000000';
@@ -100,10 +101,11 @@ function makeFakeModel(catalog) {
         value = {
           features: [{ level: '필수', title: '문의 접수', detail: '게시판과 시트에 동시 저장' }],
           production: [{ mark: '전용', title: '블록 설명은 쇼핑몰 기준입니다. ', detail: '서비스로 바꿔 읽어야 합니다.' }],
-          technical: [{ area: '속도', items: ['첫 화면 이미지는 200KB 이하로 압축'] }],
           assetsToCollect: ['세무사 프로필 사진'],
           budgetNote: '예산 안에서 무리가 없습니다.',
         };
+      } else if (stage === '기술 검토') {
+        value = { technical: [{ area: '속도', items: ['첫 화면 이미지는 200KB 이하로 압축'] }] };
       } else {
         throw new Error(`모르는 단계: ${stage}`);
       }
@@ -160,6 +162,41 @@ async function main() {
   check('밝은 테마 색이 정의됨', html.includes(':root{--paper:'));
   check('어두운 테마도 정의됨', html.includes('prefers-color-scheme:dark'));
   check('본문 배경을 직접 칠함', html.includes('background:var(--paper)'));
+
+  console.log('\n─── 동시 실행 ───');
+  const arch = { pages: [{ title: 'A' }, { title: 'B' }, { title: 'C' }] };
+
+  // 아직 아무 페이지도 안 끝난 상태
+  let state = { brief: {}, strategy: {}, architecture: arch, pages: [] };
+  check('남은 페이지 3개를 모두 내놓음', pendingPageStages(state).length === 3);
+  check('다음 단계는 첫 페이지', nextStage(state).key === 'page:0');
+
+  // 2번이 0번보다 먼저 끝난 상황
+  state = { ...state, pages: [{ index: 2, title: 'C', sections: [] }] };
+  const pending = pendingPageStages(state);
+  check('끝난 페이지는 다시 요청하지 않음', !pending.some((p) => p.key === 'page:2'));
+  check('남은 것은 0번과 1번', pending.map((p) => p.key).join() === 'page:0,page:1');
+
+  // 전부 끝났지만 순서가 뒤섞인 상태
+  state = {
+    ...state,
+    pages: [
+      { index: 2, title: 'C', sections: [] },
+      { index: 0, title: 'A', sections: [] },
+      { index: 1, title: 'B', sections: [] },
+    ],
+  };
+  check('페이지가 다 차면 유의점으로 넘어감', nextStage(state).key === 'advisories');
+  check(
+    '완성 순서와 무관하게 사이트맵 순서로 정렬',
+    assemble(state).pages.map((p) => p.title).join() === 'A,B,C',
+  );
+
+  state = { ...state, advisories: { features: [] } };
+  check('유의점 다음은 기술 검토', nextStage(state).key === 'technical');
+  state = { ...state, technical: [{ area: '속도', items: [] }] };
+  check('기술 검토까지 끝나면 완료', nextStage(state) === null);
+  check('기술 검토가 유의점에 합쳐짐', assemble(state).advisories.technical.length === 1);
 
   const outDir = path.join(ROOT, 'out', 'selftest');
   await fs.mkdir(outDir, { recursive: true });
