@@ -135,6 +135,14 @@ scroll = await winScroll();
 check('Ctrl+휠로 캔버스가 확대됨', after.scale > before.scale, `${before.scale} → ${after.scale}`);
 check('Ctrl+휠에 창이 따라 움직이지 않음', scroll.x === 0 && scroll.y === 0, JSON.stringify(scroll));
 
+// 드래그로 옮길 때 글자가 잡히면 안 된다
+await page.mouse.move(cx, cy);
+await page.mouse.down();
+await page.mouse.move(cx - 260, cy - 160, { steps: 10 });
+await page.mouse.up();
+const selected = await page.evaluate(() => getSelection().toString());
+check('드래그해도 글자가 선택되지 않음', selected === '', JSON.stringify(selected));
+
 // 커서를 축으로 확대하는지: 커서 아래 지점이 제자리에 남아야 한다
 const mx = cx - box.x;
 const my = cy - box.y;

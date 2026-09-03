@@ -239,6 +239,8 @@ legend {
 
 .canvas-frame {
   position: relative; overflow: hidden; touch-action: none;
+  /* 끌어서 옮기는 곳이라 글자가 잡히면 안 된다. 파란 선택 영역이 생긴다. */
+  user-select: none; -webkit-user-select: none;
   border: 1px solid var(--hairline); border-radius: var(--r-lg);
   background: var(--parchment); cursor: grab;
 }
