@@ -24,8 +24,23 @@ function explain(err) {
   return raw;
 }
 
-export function createModel({ verbose = false } = {}) {
-  const client = new Anthropic();
+/**
+ * 답이 스키마에 안 맞아 파싱이 실패한 경우인지.
+ *
+ * 인증 실패나 크레딧 부족은 다시 불러도 같으므로 가려내야 한다. 이것만
+ * 다시 부를 값어치가 있다.
+ */
+function isSchemaMiss(err) {
+  if (err?.status && err.status !== 200) return false;
+  return /parse structured output|Validation issues/i.test(err?.message ?? '');
+}
+
+/**
+ * @param {object} [opts]
+ * @param {boolean} [opts.verbose]
+ * @param {object}  [opts.client]  자가검사에서 갈아 끼우는 자리. 평소에는 안 쓴다.
+ */
+export function createModel({ verbose = false, client = new Anthropic() } = {}) {
   const usage = { calls: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
 
   return {
@@ -47,9 +62,8 @@ export function createModel({ verbose = false } = {}) {
       }
 
       const started = Date.now();
-      let res;
-      try {
-        res = await client.messages.parse({
+      const call = () =>
+        client.messages.parse({
           model: MODEL_ID,
           max_tokens: 16000,
           thinking: { type: 'adaptive' },
@@ -57,8 +71,20 @@ export function createModel({ verbose = false } = {}) {
           system,
           messages: [{ role: 'user', content: task }],
         });
+
+      let res;
+      try {
+        res = await call();
       } catch (err) {
-        throw new Error(`[${stage}] ${explain(err)}`);
+        // 스키마에 안 맞는 답이 온 경우. 매번 같은 답이 오는 것이 아니라
+        // 한 번 더 부르면 대개 통과한다. 그냥 던지면 그때까지 만든 단계가
+        // 전부 살아 있는데도 사람이 다시 눌러야 한다. 한 번만 다시 부른다.
+        if (!isSchemaMiss(err)) throw new Error(`[${stage}] ${explain(err)}`);
+        try {
+          res = await call();
+        } catch (again) {
+          throw new Error(`[${stage}] ${explain(again)}`);
+        }
       }
 
       if (res?.stop_reason === 'refusal') {

@@ -224,42 +224,70 @@ ${JSON.stringify(strategy, null, 1)}`,
  * 그래서 이 자리에 둔다.
  */
 /**
- * 개수를 스키마에 박는다. 지시로만 "3~5개" 라고 하면 지켜지지 않는다.
- * 실제로 모바일 항목이 빈 배열로 와서 문서에서 통째로 빠진 적이 있고,
- * 망설임은 5개라 했는데 6개가 왔다.
+ * 아래 개수를 스키마에 넣을 때 **하한만** 넣는다.
+ *
+ * 모자란 것과 넘치는 것은 성격이 다르다. 모바일 항목이 빈 배열로 오면
+ * 문서에서 그 묶음이 통째로 빠지므로 결과를 못 쓴다 — 그건 다시 받아야 한다.
+ * 반대로 한 개 더 온 것은 못 쓸 결과가 아니라 그냥 긴 것이다. 그런데
+ * 상한까지 스키마에 박아 두면 파싱이 실패해 **단계 전체가 죽는다.** 실제로
+ * 모바일 항목이 5개 와서 검토 단계가 통째로 날아갔다. 부른 값은 이미 치른
+ * 뒤였다. 그래서 상한은 CAPS 로 옮겨, 받은 뒤에 잘라 낸다.
  */
 const ReviewSchema = z.object({
   market: z.object({
     // 남들 다 하는 말. 여기 걸리면 문구를 다시 쓴다.
-    sameness: z.array(z.string()).min(3).max(5),
+    sameness: z.array(z.string()).min(3),
     wedge: z.object({ claim: z.string(), evidence: z.string() }),
     // 하고 싶은 주장인데 뒷받침할 자료가 없는 것. 받아야 할 자료가 된다.
-    proofGaps: z.array(z.object({ claim: z.string(), need: z.string() })).min(2).max(5),
+    proofGaps: z.array(z.object({ claim: z.string(), need: z.string() })).min(2),
     // 문의 직전의 망설임과 그것을 푸는 자리.
     objections: z
       .array(z.object({ doubt: z.string(), answerAt: z.string(), how: z.string() }))
-      .min(3)
-      .max(5),
+      .min(3),
   }),
   ux: z.object({
     entries: z
       .array(z.object({ from: z.string(), expects: z.string(), firstScreen: z.string() }))
-      .min(1)
-      .max(4),
+      .min(1),
     flows: z
       .array(z.object({ name: z.string(), steps: z.array(z.string()), friction: z.string() }))
-      .min(2)
-      .max(3),
+      .min(2),
     dropoffs: z
       .array(z.object({ where: z.string(), why: z.string(), fix: z.string() }))
-      .min(2)
-      .max(4),
-    mobile: z.array(z.string()).min(2).max(4),
+      .min(2),
+    mobile: z.array(z.string()).min(2),
   }),
 });
 
+/** 검토에서 자를 상한. 프롬프트에 적은 개수와 같아야 한다. */
+const REVIEW_CAPS = {
+  'market.sameness': 5,
+  'market.proofGaps': 5,
+  'market.objections': 5,
+  'ux.entries': 4,
+  'ux.flows': 3,
+  'ux.dropoffs': 4,
+  'ux.mobile': 4,
+};
+
+/**
+ * 상한을 넘겨 온 목록을 잘라 낸다.
+ *
+ * 앞에서부터 남긴다. 모델은 중요한 것을 먼저 쓰므로 뒤가 덜 아깝다.
+ */
+export function capLists(obj, caps) {
+  for (const [path, max] of Object.entries(caps)) {
+    const keys = path.split('.');
+    const last = keys.pop();
+    const holder = keys.reduce((o, k) => o?.[k], obj);
+    const list = holder?.[last];
+    if (Array.isArray(list) && list.length > max) holder[last] = list.slice(0, max);
+  }
+  return obj;
+}
+
 export async function stageReview(model, { brief, strategy, architecture }) {
-  return model.generate({
+  const review = await model.generate({
     stage: '마케팅·UX 검토',
     role: ROLE,
     schema: ReviewSchema,
@@ -323,6 +351,9 @@ ${JSON.stringify(strategy, null, 1)}
 --- 사이트맵 ---
 ${JSON.stringify(architecture, null, 1)}`,
   });
+
+  // 개수를 넘겨 왔다고 단계를 죽이지 않는다. 앞에서부터 남기고 자른다.
+  return capLists(review, REVIEW_CAPS);
 }
 
 /* ── 5단계: 페이지별 섹션 구성 ────────────────────────────────── */
@@ -608,7 +639,7 @@ const GuidelineSchema = z.object({
   // 식스샵 지침 목록에 뜰 이름. 짧은 영문 슬러그.
   name: z.string(),
   description: z.string(),
-  mood: z.array(z.string()).min(3).max(5),
+  mood: z.array(z.string()).min(3),
 
   colors: z.object({
     primary: HEX,
@@ -624,15 +655,16 @@ const GuidelineSchema = z.object({
   typography: z.object({
     bodyFont: z.string(),
     headingFont: z.string(),
-    bodySize: z.number().min(14).max(20),
+    // 본문 크기는 목록이 아니라 값이라 잘라 낼 수 없다. 벗어나면 코드가
+    // 가까운 쪽으로 당긴다. 40px 본문 하나 때문에 단계를 죽일 이유가 없다.
+    bodySize: z.number(),
     bodyWeight: z.number(),
     bodyLineHeight: z.number(),
     bodyLetterSpacing: z.string(),
     scale: z
       .array(z.object({ role: z.string(), size: z.number(), weight: z.number() }))
-      .min(3)
-      .max(5),
-    weights: z.array(z.number()).min(2).max(4),
+      .min(3),
+    weights: z.array(z.number()).min(2),
   }),
 
   rounded: z.object({ sm: z.number(), md: z.number(), lg: z.number(), pill: z.number() }),
@@ -641,13 +673,26 @@ const GuidelineSchema = z.object({
     lg: z.number(), xl: z.number(), section: z.number(),
   }),
 
-  components: z.array(z.object({ name: z.string(), spec: z.string() })).min(4).max(7),
-  dos: z.array(z.string()).min(4).max(6),
-  donts: z.array(z.string()).min(5).max(8),
+  components: z.array(z.object({ name: z.string(), spec: z.string() })).min(4),
+  dos: z.array(z.string()).min(4),
+  donts: z.array(z.string()).min(5),
 });
 
+/** 지침에서 자를 상한. 프롬프트에 적은 개수와 같아야 한다. */
+const GUIDELINE_CAPS = {
+  mood: 5,
+  'typography.scale': 5,
+  'typography.weights': 4,
+  components: 7,
+  dos: 6,
+  donts: 8,
+};
+
+/** 본문 글자 크기의 상하한. 이 밖으로 나오면 당긴다. */
+const BODY_SIZE = { min: 14, max: 20 };
+
 export async function stageGuideline(model, { brief, strategy, review }) {
-  return model.generate({
+  const guideline = await model.generate({
     stage: '디자인 지침',
     role: ROLE,
     schema: GuidelineSchema,
@@ -714,6 +759,13 @@ ${review ? `
 --- 마케팅·UX 검토 ---
 ${JSON.stringify(review, null, 1)}` : ''}`,
   });
+
+  capLists(guideline, GUIDELINE_CAPS);
+  const size = guideline.typography?.bodySize;
+  if (typeof size === 'number') {
+    guideline.typography.bodySize = Math.min(BODY_SIZE.max, Math.max(BODY_SIZE.min, size));
+  }
+  return guideline;
 }
 
 /* ── 전체 실행 ────────────────────────────────────────────────── */

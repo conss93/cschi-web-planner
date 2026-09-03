@@ -12,13 +12,15 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { loadCatalog } from '../../src/catalog-file.mjs';
 import { renderBlockMenu, renderStyleTable, blockLabel, previewUrls } from '../../src/catalog.mjs';
-import { runPipeline } from '../../src/pipeline.mjs';
+import { runPipeline, stageReview, stageGuideline } from '../../src/pipeline.mjs';
 import { renderPlan } from '../../src/render.mjs';
 import { nextStage, pendingPageStages, assemble, findDuplicates, summarize } from '../../lib/runner.mjs';
 import { normalizePages } from '../../lib/edit.mjs';
 import { buildPack, packMarkdown, packCsv, IMAGE_CATEGORIES } from '../../src/pack.mjs';
 import { guidelineMarkdown, checkContrast } from '../../src/guideline.mjs';
 import { contrast } from '../../src/color.mjs';
+import { createModel } from '../../src/model.mjs';
+import { z } from 'zod';
 import { toBriefText, parseBriefText, missingRequired } from '../../lib/brief-form.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
@@ -336,12 +338,15 @@ async function main() {
   const tooFew = { ...plan.review, ux: { ...plan.review.ux, mobile: ['하나만'] } };
   const none = { ...plan.review, ux: { ...plan.review.ux, mobile: [] } };
 
+  // 모자란 것은 못 쓰는 결과라 다시 받아야 한다. 하한은 스키마에 남긴다.
   check('모바일 항목이 비면 통과하지 못함', !reviewSchemaAccepts(none));
   check('모바일 항목이 하나뿐이어도 통과하지 못함', !reviewSchemaAccepts(tooFew));
-  check('모바일 항목이 다섯이면 통과하지 못함', !reviewSchemaAccepts(tooMany));
   check('알맞은 개수는 통과함', reviewSchemaAccepts(plan.review));
 
-  check('망설임 여섯 개는 통과하지 못함', !reviewSchemaAccepts({
+  // 넘치는 것은 못 쓰는 결과가 아니라 그냥 긴 것이다. 여기서 파싱을 실패시키면
+  // 이미 값을 치른 호출이 통째로 날아간다. 실제로 그렇게 검토 단계가 죽었다.
+  check('모바일 항목이 다섯이어도 통과함', reviewSchemaAccepts(tooMany));
+  check('망설임 여섯 개도 통과함', reviewSchemaAccepts({
     ...plan.review,
     market: {
       ...plan.review.market,
@@ -350,6 +355,42 @@ async function main() {
       })),
     },
   }));
+
+  // 대신 단계가 받은 뒤에 자른다. 이 배선이 실제로 걸려 있는지 본다.
+  const longReview = await stageReview(
+    {
+      generate: async () => ({
+        market: {
+          sameness: ['가', '나', '다', '라', '마', '바'],
+          wedge: { claim: 'x', evidence: 'y' },
+          proofGaps: Array.from({ length: 7 }, (_, i) => ({ claim: `주장 ${i}`, need: '자료' })),
+          objections: Array.from({ length: 6 }, (_, i) => ({
+            doubt: `망설임 ${i}`, answerAt: '홈', how: '풉니다',
+          })),
+        },
+        ux: {
+          entries: Array.from({ length: 6 }, (_, i) => ({
+            from: `유입 ${i}`, expects: 'x', firstScreen: 'y',
+          })),
+          flows: Array.from({ length: 5 }, (_, i) => ({
+            name: `흐름 ${i}`, steps: ['홈'], friction: 'x',
+          })),
+          dropoffs: Array.from({ length: 6 }, (_, i) => ({ where: `${i}`, why: 'x', fix: 'y' })),
+          mobile: ['가', '나', '다', '라', '마'],
+        },
+      }),
+    },
+    { brief: {}, strategy: {}, architecture: {} },
+  );
+  check('넘겨 온 모바일 항목을 넷으로 자름', longReview.ux.mobile.length === 4);
+  check('앞에서부터 남김', longReview.ux.mobile.join() === '가,나,다,라');
+  check('망설임도 다섯으로 자름', longReview.market.objections.length === 5);
+  check('남들 다 하는 말도 다섯으로 자름', longReview.market.sameness.length === 5);
+  check('자료 부족도 다섯으로 자름', longReview.market.proofGaps.length === 5);
+  check('유입은 넷으로 자름', longReview.ux.entries.length === 4);
+  check('흐름은 셋으로 자름', longReview.ux.flows.length === 3);
+  check('이탈 지점은 넷으로 자름', longReview.ux.dropoffs.length === 4);
+  check('자른 결과는 스키마를 다시 통과함', reviewSchemaAccepts(longReview));
 
   check('한 사실을 여러 목록에 나눠 쓰지 말라는 지시가 있음',
     reviewTask.task.includes('가장 잘 맞는 목록 한 곳에만'));
@@ -764,6 +805,81 @@ async function main() {
   check('하지 말 것이 실림', gmd.includes('이렇게 하지 않습니다'));
   check('금지 규칙에 이유가 붙어 있음', g.donts.every((d) => d.includes('—')));
   check('글꼴을 확인하라고 적혀 있음', gmd.includes('식스샵에서 실제로 쓸 수 있는지'));
+
+  // 지침도 같다. 넘겨 온 것은 자르고, 본문 크기는 범위 안으로 당긴다.
+  const longGuideline = await stageGuideline(
+    {
+      generate: async () => ({
+        ...g,
+        mood: ['가', '나', '다', '라', '마', '바'],
+        typography: {
+          ...g.typography,
+          bodySize: 40,
+          weights: [100, 200, 300, 400, 700],
+          scale: Array.from({ length: 7 }, (_, i) => ({ role: `${i}`, size: 20, weight: 400 })),
+        },
+        components: Array.from({ length: 9 }, (_, i) => ({ name: `${i}`, spec: 'x' })),
+        dos: Array.from({ length: 8 }, (_, i) => `해야 할 것 ${i}`),
+        donts: Array.from({ length: 12 }, (_, i) => `하지 말 것 ${i}`),
+      }),
+    },
+    { brief: {}, strategy: {}, review: {} },
+  );
+  check('지침의 분위기를 다섯으로 자름', longGuideline.mood.length === 5);
+  check('구성 요소를 일곱으로 자름', longGuideline.components.length === 7);
+  check('금지 규칙을 여덟으로 자름', longGuideline.donts.length === 8);
+  check('해야 할 것을 여섯으로 자름', longGuideline.dos.length === 6);
+  check('굵기를 넷으로 자름', longGuideline.typography.weights.length === 4);
+  check('본문 크기는 잘라 낼 수 없으니 범위로 당김', longGuideline.typography.bodySize === 20);
+
+  const tinyBody = await stageGuideline(
+    { generate: async () => ({ ...g, typography: { ...g.typography, bodySize: 9 } }) },
+    { brief: {}, strategy: {}, review: {} },
+  );
+  check('너무 작은 본문 크기도 당김', tinyBody.typography.bodySize === 14);
+
+  /* ── 스키마에 안 맞는 답이 왔을 때 ────────────────────────── */
+
+  // 하한은 잘라서 못 고친다. 그런데 매번 같은 답이 오는 것도 아니다.
+  // 한 번 더 부르면 대개 통과하므로, 사람이 다시 누르게 두지 않는다.
+  const OkSchema = z.object({ ok: z.boolean() });
+  const miss = () => Object.assign(new Error(
+    'Failed to parse structured output: [ { "code": "too_small", "path": [ "ux", "mobile" ] } ]',
+  ), { status: 200 });
+
+  let tries = 0;
+  const flaky = createModel({
+    client: { messages: { parse: async () => {
+      if (++tries === 1) throw miss();
+      return { parsed_output: { ok: true }, usage: {} };
+    } } },
+  });
+  const recovered = await flaky.generate({ stage: '검토', role: 'r', task: 't', schema: OkSchema });
+  check('스키마에 안 맞으면 한 번 다시 부름', tries === 2 && recovered.ok === true);
+
+  let always = 0;
+  const broken = createModel({
+    client: { messages: { parse: async () => { always++; throw miss(); } } },
+  });
+  const brokenErr = await broken
+    .generate({ stage: '검토', role: 'r', task: 't', schema: OkSchema })
+    .then(() => null, (e) => e);
+  check('두 번 다 안 맞으면 그때는 멈춤', always === 2 && brokenErr instanceof Error);
+  check('멈출 때 어느 단계인지 알려 줌', brokenErr.message.startsWith('[검토]'));
+
+  // 크레딧 부족이나 인증 실패는 다시 불러도 같다. 값만 두 번 치른다.
+  let paid = 0;
+  const noCredit = createModel({
+    client: { messages: { parse: async () => {
+      paid++;
+      throw Object.assign(new Error('Your credit balance is too low'), { status: 400 });
+    } } },
+  });
+  const creditErr = await noCredit
+    .generate({ stage: '검토', role: 'r', task: 't', schema: OkSchema })
+    .then(() => null, (e) => e);
+  check('크레딧 부족은 다시 부르지 않음', paid === 1);
+  check('크레딧 부족은 무엇을 해야 하는지 알려 줌', creditErr.message.includes('충전'));
 
   const badMd = guidelineMarkdown(unreadable, {});
   check('안 읽히는 조합은 문서에도 적힘', badMd.includes('확인이 필요한 색 조합'));
