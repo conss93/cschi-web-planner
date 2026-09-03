@@ -127,6 +127,26 @@ export default function PlanPage({ params }) {
     drive();
   }, [drive]);
 
+  // 검토 단계가 생기기 전에 만든 기획서에 그 단계만 뒤늦게 붙인다.
+  // 브리프·전략·사이트맵만 있으면 도는 단계라 한 번 부르면 끝난다.
+  const addReview = useCallback(async () => {
+    setBusy(true);
+    setError('');
+    const res = await fetch(`/api/plans/${id}/stage`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ stage: 'review' }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? '검토를 만들지 못했습니다.');
+      setBusy(false);
+      return;
+    }
+    await load();
+    setBusy(false);
+  }, [id, load]);
+
   // 같은 상담 내용으로 다시 만든다. 이전 기획서는 그대로 두어 비교할 수 있다.
   const regenerate = useCallback(async () => {
     if (!plan?.brief_text) return;
@@ -213,6 +233,19 @@ export default function PlanPage({ params }) {
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {done && !plan.data.review && (
+        <div className="notice noprint">
+          <p style={{ margin: '0 0 12px' }}>
+            이 기획서는 마케팅·UX 검토가 생기기 전에 만든 것입니다.
+            검토만 따로 붙일 수 있습니다. 다만 페이지 문구는 검토를 보지 못하고
+            만들어진 것이라, 문구까지 반영하려면 같은 내용으로 다시 만들어야 합니다.
+          </p>
+          <button className="btn" onClick={addReview} disabled={busy}>
+            {busy ? '검토하는 중' : '검토 붙이기'}
+          </button>
         </div>
       )}
 
