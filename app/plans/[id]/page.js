@@ -178,6 +178,7 @@ export default function PlanPage({ params }) {
         <h1>{plan.company || '기획서'}</h1>
         <nav>
           <a className="btn ghost" href="/">목록</a>
+          {done && <a className="btn ghost" href={`/plans/${plan.id}/edit`}>섹션 편집</a>}
           {done && (
             <a className="btn ghost" href={`/share/${plan.share_token}`} target="_blank" rel="noreferrer">
               공유 링크

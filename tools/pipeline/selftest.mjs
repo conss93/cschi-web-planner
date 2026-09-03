@@ -14,7 +14,8 @@ import { loadCatalog } from '../../src/catalog-file.mjs';
 import { renderBlockMenu, renderStyleTable } from '../../src/catalog.mjs';
 import { runPipeline } from '../../src/pipeline.mjs';
 import { renderPlan } from '../../src/render.mjs';
-import { nextStage, pendingPageStages, assemble, findDuplicates } from '../../lib/runner.mjs';
+import { nextStage, pendingPageStages, assemble, findDuplicates, summarize } from '../../lib/runner.mjs';
+import { normalizePages } from '../../lib/edit.mjs';
 import { toBriefText, parseBriefText, missingRequired } from '../../lib/brief-form.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
@@ -270,6 +271,58 @@ async function main() {
   state = { ...state, technical: [{ area: '속도', items: [] }] };
   check('기술 검토까지 끝나면 완료', nextStage(state) === null);
   check('기술 검토가 유의점에 합쳐짐', assemble(state).advisories.technical.length === 1);
+
+  /* ── 섹션 편집: 화면에서 온 값을 다듬는 규칙 ──────────────── */
+
+  const real = pick(catalog, '헤더') ?? catalog.blocks[0];
+  const other = catalog.blocks.find((b) => b.blockId !== real.blockId);
+  const before = {
+    architecture: { pages: [{ title: '홈', slug: 'home' }, { title: '소개', slug: 'about' }] },
+    pages: [
+      { index: 0, title: '홈', slug: 'home', sections: [
+        { purpose: '헤더', blockId: real.blockId, note: '', copy: '', needsCustomTone: false },
+        { purpose: '본문', blockId: other.blockId, note: '', copy: '', needsCustomTone: false },
+      ] },
+      { index: 1, title: '소개', slug: 'about', sections: [] },
+    ],
+  };
+
+  // 순서를 뒤집고, 없는 블록을 하나 넣고, 사이트맵에 없는 페이지를 끼워 본다.
+  const edited = normalizePages(
+    before,
+    [
+      { index: 1, sections: [{ purpose: '새 자리', blockId: FAKE_ID }] },
+      { index: 0, sections: [
+        { purpose: '본문', blockId: other.blockId, needsCustomTone: true },
+        { purpose: '헤더', blockId: real.blockId },
+        { purpose: '기본 기능', blockId: '' },
+      ] },
+      { index: 99, sections: [{ purpose: '몰래 넣은 페이지', blockId: real.blockId }] },
+    ],
+    catalog,
+  );
+
+  check('편집 결과는 사이트맵 순서로 되돌아옴', edited.pages.map((p) => p.index).join() === '0,1');
+  check('사이트맵에 없는 페이지는 버림', edited.pages.every((p) => p.index !== 99));
+  check('바꾼 자리 순서가 그대로 남음', edited.pages[0].sections[0].purpose === '본문');
+  check('없는 블록이 든 자리는 빠짐', edited.pages[1].sections.length === 0);
+  check('무엇이 빠졌는지 알려 줌', edited.problems.length === 1 && edited.problems[0].includes(FAKE_ID));
+  check('블록 이름을 카탈로그에서 다시 붙임', edited.pages[0].sections[1].blockName === real.name);
+  check('블록 없는 자리(식스샵 기본 기능)는 살아남음', edited.pages[0].sections[2].blockId === '');
+  check('페이지 제목·주소는 사이트맵 값을 씀', edited.pages[0].slug === 'home');
+  check('손으로 켠 톤 커스텀이 남음', edited.pages[0].sections[0].needsCustomTone === true);
+
+  const editedCounts = summarize({ ...before, pages: edited.pages });
+  // 블록 없는 자리(식스샵 기본 기능)는 마켓플레이스 배치가 아니므로 세지 않는다.
+  check('편집 뒤 집계가 다시 계산됨', editedCounts.placements === 2 && editedCounts.pages === 2);
+  check('블록 없는 자리는 배치로 세지 않음', editedCounts.blocks === 2);
+
+  const overflow = normalizePages(
+    before,
+    [{ index: 0, sections: Array.from({ length: 60 }, () => ({ purpose: 'x', blockId: real.blockId })) }],
+    catalog,
+  );
+  check('한 페이지 자리 수에 상한이 있음', overflow.pages[0].sections.length === 40);
 
   const outDir = path.join(ROOT, 'out', 'selftest');
   await fs.mkdir(outDir, { recursive: true });
