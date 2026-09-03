@@ -29,6 +29,27 @@ const PENDING = /확인\s*필요|확정\s*후|확정\s*자료|미확정/;
 /** 문구 안의 [버튼] 표기. 조립할 때 링크를 걸어야 하는 자리다. */
 const BUTTON = /\[([^\]\n]{1,40})\]/g;
 
+/**
+ * 대괄호 안에 들어 있어도 버튼이 아닌 것.
+ *
+ * 대괄호가 두 가지로 쓰이고 있었다. 버튼 표기이기도 하고 "[확인 필요]",
+ * "[메뉴명 1]" 처럼 아직 안 정해진 값의 자리이기도 했다. 그대로 두면
+ * AI 블록 프롬프트가 "'확인 필요' 라는 글자는 버튼입니다" 라고 시키게 된다.
+ * 실제로 '버튼 · 버튼', '확인 필요 · 확인 필요' 같은 것이 버튼으로 세어졌다.
+ */
+const NOT_BUTTON = [
+  PENDING,                       // 확인 필요 · 확정 후 · 미확정
+  /^버튼\s*\d*$/,                 // [버튼] 이라고 쓴 자리 표시 그 자체
+  /^[^\s]*(명|이름|번호|주소|산지|시간|일자|날짜)\s*\d*$/, // [메뉴명 1] [원두명] [산지]
+  /^○+|^[-–—\s]*$/,              // ○○ 같은 빈칸 표시
+];
+
+/** 이 대괄호가 실제로 누르는 자리를 뜻하는가. */
+export function isButton(label) {
+  const s = String(label ?? '').trim();
+  return s.length > 0 && !NOT_BUTTON.some((re) => re.test(s));
+}
+
 const lines = (s) => String(s ?? '').split('\n').map((l) => l.trim()).filter(Boolean);
 
 export function buildPack(data, catalog, { company = '' } = {}) {
@@ -69,7 +90,7 @@ export function buildPack(data, catalog, { company = '' } = {}) {
         needsCustomTone: Boolean(s.needsCustomTone),
         needsImage: categories.some((c) => IMAGE_CATEGORIES.has(c)),
         pending: PENDING.test(copy) || PENDING.test(String(s.note ?? '')),
-        buttons: [...copy.matchAll(BUTTON)].map((m) => m[1]),
+        buttons: [...copy.matchAll(BUTTON)].map((m) => m[1].trim()).filter(isButton),
         copy,
         note: String(s.note ?? ''),
       };

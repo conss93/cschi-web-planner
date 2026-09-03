@@ -10,28 +10,57 @@
  * 모든 페이지에 같은 블록으로 들어가는 자리는 전역 요소다.
  * 헤더와 푸터가 대표적인데, 페이지마다 세면 블록 수가 부풀고 견적이 틀어진다.
  */
+/**
+ * 위아래 끝에서 몇 자리까지를 "가장자리" 로 볼 것인가.
+ *
+ * 1 이면 맨 위 한 자리만 본다. 그런데 헤더 위에 공지 띠배너가 한 줄 오는
+ * 구성이 흔하고, 그러면 헤더가 페이지마다 두 번째 자리로 밀려 전역으로
+ * 안 잡힌다. 실제로 그렇게 헤더만 5회 배치로 세어졌다. 2 로 두면 그 경우가
+ * 걸리고, 본문 블록까지 끌어올릴 만큼 넓지는 않다.
+ */
+const EDGE = 2;
+
 export function splitGlobals(pages) {
   const usable = pages.filter((p) => p.sections?.length);
   if (usable.length < 2) return { globals: [], pages };
 
-  // 자리까지 같아야 전역이다. 맨 위에 오는 헤더와 맨 아래 푸터가 그렇다.
+  // 자리까지 같아야 전역이다. 위쪽 끝의 헤더와 아래쪽 끝의 푸터가 그렇다.
   // 단순히 "모든 페이지에 있는 블록"으로 잡으면 문의 폼처럼 여러 페이지에
   // 반복되는 본문 블록까지 끌어올려 페이지 구성이 비어 버린다.
-  const sameAt = (pick) => {
-    const ids = usable.map((p) => pick(p.sections)?.blockId);
-    return ids[0] && ids.every((id) => id === ids[0]) ? ids[0] : null;
+  //
+  // 한 페이지 안에 두 번 나오는 블록은 전역이 아니다. 헤더와 푸터는 한
+  // 페이지에 한 번뿐이고, 여러 번 쓰이는 블록을 끌어올리면 나머지 자리가
+  // 문서에서 사라진다.
+  const onceOnly = (page, id) =>
+    page.sections.filter((s) => s.blockId === id).length === 1;
+
+  // 자리가 적은 페이지에서는 위 묶음과 아래 묶음이 겹친다. 겹치면 본문
+  // 블록까지 가장자리로 들어가 전역으로 끌려 올라간다. 페이지 길이에 맞춰
+  // 좁힌다: 자리가 셋이면 위아래 한 자리씩만 본다.
+  const edgeOf = (sections) => Math.min(EDGE, Math.floor(sections.length / 2));
+
+  const sharedInBand = (band) => {
+    const sets = usable.map((p) => ({
+      page: p,
+      ids: new Set(band(p.sections).map((s) => s.blockId).filter(Boolean)),
+    }));
+    return [...sets[0].ids].filter((id) =>
+      sets.every((x) => x.ids.has(id) && onceOnly(x.page, id)),
+    );
   };
 
-  const headId = sameAt((sections) => sections[0]);
-  const footId = sameAt((sections) => sections[sections.length - 1]);
-  const globalIds = new Set([headId, footId].filter(Boolean));
+  const globalIds = new Set([
+    ...sharedInBand((s) => s.slice(0, edgeOf(s))),
+    ...sharedInBand((s) => s.slice(s.length - edgeOf(s))),
+  ]);
   if (!globalIds.size) return { globals: [], pages };
 
   const globals = [];
   const trimmed = pages.map((page) => ({
     ...page,
     sections: (page.sections ?? []).filter((s, i, all) => {
-      const atEdge = i === 0 || i === all.length - 1;
+      const edge = edgeOf(all);
+      const atEdge = i < edge || i >= all.length - edge;
       if (!atEdge || !globalIds.has(s.blockId)) return true;
       if (!globals.some((g) => g.blockId === s.blockId)) globals.push(s);
       return false;

@@ -62,8 +62,9 @@ export function guidelineMarkdown(g, { company } = {}) {
 
   out.push('---');
   out.push(`version: alpha`);
-  out.push(`name: ${g.name}`);
-  out.push(`description: ${g.description}`);
+  // 설명에 콜론이 하나만 있어도 YAML 이 깨진다. 자유롭게 쓴 글이라 감싼다.
+  out.push(`name: ${yamlText(g.name)}`);
+  out.push(`description: ${yamlText(g.description)}`);
   out.push('');
 
   out.push('colors:');
@@ -77,7 +78,13 @@ export function guidelineMarkdown(g, { company } = {}) {
   out.push(`    fontWeight: ${t.bodyWeight}`);
   out.push(`    lineHeight: ${t.bodyLineHeight}`);
   out.push(`    letterSpacing: ${t.bodyLetterSpacing}`);
+  // body 는 위에서 이미 적었다. 크기 단계에 body 나 같은 이름이 또 오면
+  // YAML 에 같은 열쇠가 두 번 들어가 뒤엣것이 앞엣것을 덮는다. 실제로
+  // 모델이 단계를 display·h2·h3·body·caption 으로 내놓아 그렇게 됐다.
+  const seen = new Set(['body']);
   for (const step of t.scale) {
+    if (seen.has(step.role)) continue;
+    seen.add(step.role);
     out.push(`  ${step.role}:`);
     out.push(`    fontFamily: ${yamlText(t.headingFont)}`);
     out.push(`    fontSize: ${step.size}px`);

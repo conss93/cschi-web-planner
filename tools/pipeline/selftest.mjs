@@ -19,6 +19,7 @@ import { normalizePages } from '../../lib/edit.mjs';
 import { buildPack, packMarkdown, packCsv, IMAGE_CATEGORIES } from '../../src/pack.mjs';
 import { guidelineMarkdown, checkContrast } from '../../src/guideline.mjs';
 import { contrast } from '../../src/color.mjs';
+import { splitGlobals } from '../../src/counts.mjs';
 import { createModel } from '../../src/model.mjs';
 import { z } from 'zod';
 import { toBriefText, parseBriefText, missingRequired } from '../../lib/brief-form.mjs';
@@ -497,6 +498,31 @@ async function main() {
   };
   const built = assemble(withGlobals);
   check('맨 위·맨 아래 공통 블록만 전역으로 뺌', built.globals.map((g) => g.blockId).sort().join() === 'f1,h1');
+
+  // 헤더 위에 공지 띠배너가 한 줄 오는 구성이 흔하다. 맨 위 한 자리만 보면
+  // 헤더가 페이지마다 두 번째로 밀려 전역에서 빠지고, 배치 횟수가 부푼다.
+  // 실제 기획서에서 헤더만 5회로 세어졌다.
+  const notch = (title, top) => ({
+    index: title.charCodeAt(0), title,
+    sections: [
+      ...top,
+      { purpose: '헤더', blockId: 'h1' },
+      { purpose: `본문 ${title}`, blockId: `x${title}` },
+      { purpose: `본문 둘 ${title}`, blockId: `y${title}` },
+      { purpose: '푸터', blockId: 'f1' },
+    ],
+  });
+  const banded = splitGlobals([
+    notch('A', [{ purpose: '공지 띠', blockId: 'n1' }]),
+    notch('B', []),
+    notch('C', []),
+  ]);
+  check('띠배너에 밀린 헤더도 전역으로 잡힘',
+    banded.globals.map((g) => g.blockId).sort().join() === 'f1,h1');
+  check('한 페이지에만 있는 띠배너는 전역이 아님',
+    banded.pages[0].sections.some((s) => s.blockId === 'n1'));
+  check('전역을 뺀 자리에 본문이 남음',
+    banded.pages[1].sections.map((s) => s.blockId).join() === 'xB,yB');
   check('여러 페이지에 나오는 본문 블록은 전역이 아님', built.pages.every((p) => p.sections.length === 1));
   check('블록 종류는 3종 (헤더·본문·푸터)', built.counts.blocks === 3);
   check('배치 횟수는 4회', built.counts.placements === 4);
@@ -639,6 +665,21 @@ async function main() {
   check('그림이 필요한 자리를 분류로 알아냄', pack.pages[0].sections[0].needsImage === true);
   check('글만으로 되는 자리는 이미지 필요가 아님', pack.pages[1].sections[0].needsImage === false);
   check('문구 속 [버튼] 표기를 뽑아냄', pack.pages[0].sections[0].buttons.join() === '메뉴 보기');
+
+  // 대괄호가 버튼 표기와 "아직 안 정해진 값" 두 가지로 쓰이고 있었다.
+  // 그대로 두면 '확인 필요' 나 '버튼' 이라는 글자가 버튼으로 세어지고,
+  // AI 블록 프롬프트가 그것을 버튼으로 만들라고 시킨다.
+  const brackets = buildPack(
+    { pages: [{ index: 0, title: '홈', sections: [
+      { purpose: '이것저것', fill: '마켓플레이스 블록', blockId: textOnly.blockId, note: '',
+        copy: '[메뉴 보기]\n[확인 필요]\n[버튼] 오시는 길 보기\n[메뉴명 1] / [원두명] / [산지]\n[대표 메뉴명 확인 필요]\n수원 ○○구 ○○로' },
+    ] }] },
+    catalog,
+  );
+  check('진짜 버튼만 남음', brackets.pages[0].sections[0].buttons.join() === '메뉴 보기');
+  check('버튼이 아닌 대괄호는 문구에 그대로 있음',
+    brackets.pages[0].sections[0].copy.includes('[확인 필요]'));
+  check('버튼 개수 집계도 같이 맞음', brackets.summary.buttons === 1);
   check('확정 자료를 기다리는 자리를 표시함', pack.pages[1].sections[0].pending === true);
   check('다 정해진 자리는 미확정이 아님', pack.pages[0].sections[0].pending === false);
   check('메모에 적힌 미확정도 잡아냄', buildPack(
@@ -741,9 +782,32 @@ async function main() {
   check('문구에서 버튼 표기의 대괄호를 텀', !aiSlot.prompt.includes('[상담 신청]'));
   check('버튼 글자 자체는 문구에 남음', aiSlot.prompt.includes('\n상담 신청\n'));
 
+  // 버튼이 아닌 대괄호는 괄호째 남긴다. 괄호를 떼면 '확인 필요' 가 진짜
+  // 넣을 글자처럼 보인다.
+  const holder = buildPack(
+    { guideline: gl, pages: [{ index: 0, title: '홈', sections: [
+      { purpose: '안내', fill: 'AI 블록', blockId: '', note: '',
+        copy: '담당자: [확인 필요]\n[문의 남기기]', ai: spec },
+    ] }] },
+    catalog,
+    { company: 'x' },
+  ).pages[0].sections[0];
+  check('미정 자리는 대괄호를 남김', holder.prompt.includes('담당자: [확인 필요]'));
+  check('그 옆의 진짜 버튼은 괄호를 텀', holder.prompt.includes('\n문의 남기기\n'));
+  check('미정 자리를 버튼으로 세지 않음', holder.buttons.join() === '문의 남기기');
+
+  // 줄 앞의 "제목:" "설명:" 은 역할 표시지 화면에 찍을 글자가 아니다.
+  check('역할 표시를 찍지 말라고 일러 줌', aiSlot.prompt.includes('화면에 찍지 마세요'));
+
+  // 어느 값이 버튼이고 카드인지는 지침의 구성 요소가 정한다. 프롬프트가
+  // 다시 정하면 두 문서가 어긋난다.
+  check('모서리는 쓸 수 있는 값만 알려 줌',
+    aiSlot.prompt.includes(`모서리: ${gl.rounded.sm}·${gl.rounded.md}·${gl.rounded.lg}px`));
+  check('모서리에 역할을 배정하지 않음', !aiSlot.prompt.includes('버튼 4px'));
+  check('pill 은 숫자로 적지 않음', !aiSlot.prompt.includes('9999'));
+
   // 색은 코드가 지침에서 가져온다. 모델이 프롬프트에 따로 적으면 어긋난다.
   check('프롬프트의 색이 지침 값 그대로임', aiSlot.prompt.includes(gl.colors.primary));
-  check('프롬프트에 모서리 값이 들어감', aiSlot.prompt.includes(`버튼 ${gl.rounded.sm}px`));
   check('프롬프트에 금지 규칙이 들어감', aiSlot.prompt.includes(gl.donts[0]));
   check('금지 규칙을 다 싣지는 않음',
     gl.donts.length > 4 && !aiSlot.prompt.includes(gl.donts[4]));
@@ -802,6 +866,29 @@ async function main() {
   check('머리말에 rounded·spacing 이 들어감',
     gmd.includes('rounded:\n  sm: 4px') && gmd.includes('spacing:\n  xs: 4px'));
   check('머리말이 닫힘', gmd.includes('---\n\n# 테스트 세무법인 디자인 지침'));
+
+  // 모델이 크기 단계를 display·h2·h3·body·caption 으로 내놓으면 body 가 두 번
+  // 들어가 YAML 에서 뒤엣것이 앞엣것을 덮는다. 실제 지침 파일이 그랬다.
+  const dup = guidelineMarkdown({
+    ...g,
+    typography: {
+      ...g.typography,
+      scale: [
+        { role: 'display', size: 34, weight: 600 },
+        { role: 'body', size: 99, weight: 900 },
+        { role: 'caption', size: 13, weight: 400 },
+      ],
+    },
+  }, {});
+  const head = dup.slice(0, dup.indexOf('\n---', 4));
+  check('머리말에 같은 열쇠가 두 번 들어가지 않음',
+    (head.match(/^ {2}body:$/gm) ?? []).length === 1);
+  check('앞서 적은 본문 값이 덮이지 않음', head.includes(`fontSize: ${g.typography.bodySize}px`));
+  check('겹치지 않는 단계는 그대로 남음', head.includes('  caption:'));
+
+  // 설명에 콜론이 하나만 있어도 머리말이 깨진다.
+  const colon = guidelineMarkdown({ ...g, description: '기준: 판단에 필요한 것만' }, {});
+  check('설명을 따옴표로 감쌈', colon.includes('description: "기준: 판단에 필요한 것만"'));
   check('하지 말 것이 실림', gmd.includes('이렇게 하지 않습니다'));
   check('금지 규칙에 이유가 붙어 있음', g.donts.every((d) => d.includes('—')));
   check('글꼴을 확인하라고 적혀 있음', gmd.includes('식스샵에서 실제로 쓸 수 있는지'));
