@@ -179,6 +179,7 @@ export default function PackPage({ params }) {
                       )}
                     </div>
 
+                    {s.spec?.media && <p className="packmeta">이미지 — {s.spec.media}</p>}
                     {s.buttons.length > 0 && (
                       <p className="packmeta">버튼 — {s.buttons.join(' · ')}</p>
                     )}

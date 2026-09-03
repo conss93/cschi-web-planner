@@ -813,6 +813,14 @@ async function main() {
     gl.donts.length > 4 && !aiSlot.prompt.includes(gl.donts[4]));
   check('프롬프트가 어느 지침을 물릴지 알려 줌', aiSlot.prompt.includes(`「${gl.name}」`));
 
+  // AI 블록은 분류가 없어 이미지 필요가 늘 꺼져 있었다. 사진이 필요한
+  // 자리가 촬영 준비에서 통째로 빠진다.
+  check('배치 지시에 이미지가 있으면 이미지 필요로 셈', aiSlot.needsImage === true);
+  check('이미지 없는 AI 블록은 이미지 필요가 아님', thinSlot.needsImage === false);
+  check('AI 블록의 이미지도 집계에 들어감', withPrompt.summary.images === 2);
+  check('무슨 그림이 필요한지 목록에 보임',
+    packMarkdown(withPrompt, {}).includes('- 이미지: 인물 사진 2장, 3:4 세로'));
+
   check('배치 지시가 있으면 얇은 프롬프트가 아님', aiSlot.thinPrompt === false);
   check('목적만 있는 자리는 얇다고 표시함', thinSlot.thinPrompt === true);
   check('얇은 것도 프롬프트는 나옴', thinSlot.prompt.includes('칼럼 목록 섹션을 만들어 주세요.'));

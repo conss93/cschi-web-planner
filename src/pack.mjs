@@ -88,7 +88,12 @@ export function buildPack(data, catalog, { company = '' } = {}) {
         thumbnail: s.thumbnail ?? block?.thumbnail ?? null,
         categories,
         needsCustomTone: Boolean(s.needsCustomTone),
-        needsImage: categories.some((c) => IMAGE_CATEGORIES.has(c)),
+        // 마켓플레이스 블록은 분류로 알 수 있다. AI 블록은 분류가 없으므로
+        // 배치 지시에 적힌 이미지로 판단한다. 이걸 안 보면 "1:1 원두 사진
+        // 항목 수만큼" 이 필요한 자리가 촬영 목록에서 통째로 빠진다.
+        needsImage:
+          categories.some((c) => IMAGE_CATEGORIES.has(c)) ||
+          (fill === 'AI 블록' && Boolean(String(s.ai?.media ?? '').trim())),
         pending: PENDING.test(copy) || PENDING.test(String(s.note ?? '')),
         buttons: [...copy.matchAll(BUTTON)].map((m) => m[1].trim()).filter(isButton),
         copy,
@@ -197,6 +202,9 @@ export function packMarkdown(pack, { company, style, assets = [] } = {}) {
       if (s.blockId) out.push(`- blockId: \`${s.blockId}\``);
       for (const url of s.previews) out.push(`- 미리보기: ${url}`);
       if (mark.length) out.push(`- 확인: ${mark.join(' · ')}`);
+      // 어떤 그림이 몇 장 필요한지. 프롬프트 안에도 있지만 목록만 훑으며
+      // 촬영을 준비할 때 접힌 프롬프트를 일일이 펴게 할 이유가 없다.
+      if (s.spec?.media) out.push(`- 이미지: ${s.spec.media}`);
       if (s.buttons.length) out.push(`- 버튼: ${s.buttons.join(' · ')}`);
       if (s.note) out.push(`- 메모: ${s.note}`);
 
