@@ -269,6 +269,33 @@ legend {
 }
 .icon.copy { width: auto; padding: 0 10px; height: 26px; flex: none; font-size: 12px; }
 
+/* ── 디자인 지침 ─────────────────────────────────────────────── */
+
+.warnbox { border-color: var(--blue); }
+
+.swatches { list-style: none; margin: 0; padding: 0; }
+.swatches li {
+  display: grid; grid-template-columns: 44px 140px 96px minmax(0, 1fr) auto;
+  gap: 17px; align-items: center;
+  padding: 12px 0; border-bottom: 1px solid var(--divider); font-size: 14px;
+}
+/* 값만 적어 두면 어떤 색인지 모른다. 실제로 칠해 보여준다. */
+.chipcolor {
+  width: 44px; height: 28px; border-radius: var(--r-xs);
+  border: 1px solid var(--hairline);
+}
+.swatches .cname { font-weight: 600; }
+.swatches .cval { font-family: var(--mono); font-size: 12px; color: var(--ink-48); }
+.swatches .crole { color: var(--ink-48); }
+
+.plain-list { margin: 0 0 24px; padding-left: 19px; max-width: 70ch; }
+.plain-list li { margin-bottom: 8px; }
+
+@media (max-width: 640px) {
+  .swatches li { grid-template-columns: 44px minmax(0, 1fr) auto; }
+  .swatches .crole { display: none; }
+}
+
 /* ── 캔버스 ──────────────────────────────────────────────────── */
 
 .canvas-shell {

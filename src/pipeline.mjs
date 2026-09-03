@@ -568,6 +568,132 @@ export function validate(pages, catalog) {
   return problems;
 }
 
+/* ── 8단계: 디자인 지침 ───────────────────────────────────────── */
+
+/**
+ * 식스샵 "디자인 지침" 에 그대로 붙여넣는 문서를 만든다.
+ *
+ * AI 블록 생성에 이것을 물리면 블록마다 제각각 나오지 않는다. 값은 고정
+ * 키로 받는다. 자유롭게 이름을 짓게 두면 문서마다 구조가 달라져 붙여넣을
+ * 수 없다.
+ *
+ * 색 대비는 코드가 잰다(src/guideline.mjs). 모델에게 "읽히게 하라" 고
+ * 말해 두되, 실제로 읽히는지는 숫자로 확인한다.
+ */
+const HEX = z.string().regex(/^#[0-9a-fA-F]{6}$/, '#rrggbb 형식이어야 합니다');
+
+const GuidelineSchema = z.object({
+  // 식스샵 지침 목록에 뜰 이름. 짧은 영문 슬러그.
+  name: z.string(),
+  description: z.string(),
+  mood: z.array(z.string()).min(3).max(5),
+
+  colors: z.object({
+    primary: HEX,
+    primaryHover: HEX,
+    ink: HEX,
+    inkMuted: HEX,
+    hairline: HEX,
+    canvas: HEX,
+    surface: HEX,
+    onPrimary: HEX,
+  }),
+
+  typography: z.object({
+    bodyFont: z.string(),
+    headingFont: z.string(),
+    bodySize: z.number().min(14).max(20),
+    bodyWeight: z.number(),
+    bodyLineHeight: z.number(),
+    bodyLetterSpacing: z.string(),
+    scale: z
+      .array(z.object({ role: z.string(), size: z.number(), weight: z.number() }))
+      .min(3)
+      .max(5),
+    weights: z.array(z.number()).min(2).max(4),
+  }),
+
+  rounded: z.object({ sm: z.number(), md: z.number(), lg: z.number(), pill: z.number() }),
+  spacing: z.object({
+    xs: z.number(), sm: z.number(), md: z.number(),
+    lg: z.number(), xl: z.number(), section: z.number(),
+  }),
+
+  components: z.array(z.object({ name: z.string(), spec: z.string() })).min(4).max(7),
+  dos: z.array(z.string()).min(4).max(6),
+  donts: z.array(z.string()).min(5).max(8),
+});
+
+export async function stageGuideline(model, { brief, strategy, review }) {
+  return model.generate({
+    stage: '디자인 지침',
+    role: ROLE,
+    schema: GuidelineSchema,
+    task: `식스샵 AI 블록에 물릴 디자인 지침을 만드세요.
+
+이 문서는 AI 블록을 만들 때마다 참조됩니다. 여기 적힌 값 밖으로 나가지
+않게 하는 것이 목적입니다.
+
+## 이 문서에서 가장 중요한 것은 donts 입니다
+
+생성형 도구가 만든 화면에서 "AI 가 만든 티" 가 나는 이유는 절제가 없어서
+입니다. 그라디언트를 넣고, 그림자를 겹치고, 굵기를 다섯 단계 쓰고, 색을
+여섯 개 씁니다. 무엇을 하지 말지가 적혀 있어야 그게 멈춥니다.
+
+donts 는 5~8개. 각 줄에 **무엇을 하지 말지와 왜 그런지**를 함께 쓰세요.
+"그라디언트를 쓰지 않는다 — 배경은 단색이고 분위기는 사진이 만든다" 처럼요.
+이 사이트의 톤에서 실제로 어긋나는 것을 고르세요. 일반론은 빼십시오.
+
+dos 는 4~6개. 반드시 지켜야 눈에 띄게 달라지는 것만 쓰세요.
+
+## 색
+
+강조색(primary)은 **하나**입니다. 누를 수 있는 것은 전부 이 색이고, 그
+밖의 것에는 쓰지 않습니다. primaryHover 는 그 색의 약간 짙거나 옅은 변형
+이지 다른 색이 아닙니다.
+
+읽을 수 있어야 합니다. 본문 글자(ink)와 바탕(canvas)의 명도 차이가 충분히
+나야 하고, 강조색 위에 얹는 글자(onPrimary)도 마찬가지입니다. 옅은 회색
+글자를 흰 바탕에 놓는 조합이 가장 흔한 실수입니다.
+
+## 글자
+
+한글 사이트입니다. 실제로 한글이 지원되는 글꼴을 고르세요. 확실하지 않으면
+프리텐다드나 노토 산스 KR 처럼 널리 쓰이는 것을 씁니다.
+
+weights 는 이 사이트에서 쓸 굵기 전부입니다. 2~4개로 제한하세요. 굵기가
+많을수록 어수선해집니다. 그 사이 값은 쓰지 않는다고 donts 에 적으세요.
+
+bodyLetterSpacing 은 "-0.01em" 이나 "0" 처럼 단위를 붙인 문자열입니다.
+
+## 모서리와 간격
+
+각각 정해진 단계만 씁니다. 그 사이의 임의 숫자를 쓰지 않는 것이 통일감의
+대부분입니다. pill 은 9999 로 두세요.
+
+## 구성 요소
+
+components 는 4~7개. 이 사이트에 실제로 있는 것만 쓰세요(예: 주 버튼,
+보조 버튼, 카드, 입력칸, 상단 내비). spec 에는 배경색·글자색·모서리·여백을
+위에서 정한 값으로 적습니다.
+
+## 톤의 근거
+
+브리프의 톤 단어와 피할 인상, 전략의 포지셔닝에서 끌어내세요. 업종과
+주력 고객이 다르면 지침도 달라야 합니다. 어느 사이트에나 맞는 지침은
+아무 일도 하지 않습니다.
+
+--- 브리프 ---
+${JSON.stringify(brief, null, 1)}
+
+--- 전략 ---
+${JSON.stringify(strategy, null, 1)}
+${review ? `
+--- 마케팅·UX 검토 ---
+${JSON.stringify(review, null, 1)}` : ''}`,
+  });
+}
+
 /* ── 전체 실행 ────────────────────────────────────────────────── */
 
 export async function runPipeline({ model, catalog, briefText, onStage = () => {} }) {
@@ -604,6 +730,9 @@ export async function runPipeline({ model, catalog, briefText, onStage = () => {
   const technical = await stageTechnical(model, { brief, strategy, pages, blockMenu });
   advisories.technical = technical.technical;
 
+  onStage('디자인 지침');
+  const guideline = await stageGuideline(model, { brief, strategy, review });
+
   return {
     generatedAt: new Date().toISOString(),
     brief,
@@ -612,6 +741,7 @@ export async function runPipeline({ model, catalog, briefText, onStage = () => {
     review,
     pages,
     advisories,
+    guideline,
     problems,
     // 세는 일은 counts.mjs 한 곳에서 한다. 여기서 따로 세면 웹 화면과
     // 어긋난 숫자가 나온다.

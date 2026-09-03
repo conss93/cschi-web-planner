@@ -5,7 +5,7 @@ import { renderPlan } from '../../../src/render.mjs';
 
 const STEPS = [
   '브리프 정리', '전략과 톤', '사이트맵', '마케팅·UX 검토',
-  '페이지 구성', '기능과 유의점', '기술 검토',
+  '페이지 구성', '기능과 유의점', '기술 검토', '디자인 지침',
 ];
 
 /** 지금 도는 단계가 여섯 묶음 중 어디에 해당하는지. */
@@ -203,6 +203,9 @@ export default function PlanPage({ params }) {
           <a className="btn ghost" href="/">목록</a>
           {done && <a className="btn ghost" href={`/plans/${plan.id}/canvas`}>캔버스</a>}
           {done && <a className="btn ghost" href={`/plans/${plan.id}/pack`}>콘텐츠 팩</a>}
+          {done && plan.data.guideline && (
+            <a className="btn ghost" href={`/plans/${plan.id}/guideline`}>디자인 지침</a>
+          )}
           {done && <a className="btn ghost" href={`/plans/${plan.id}/edit`}>섹션 편집</a>}
           {done && (
             <a className="btn ghost" href={`/share/${plan.share_token}`} target="_blank" rel="noreferrer">

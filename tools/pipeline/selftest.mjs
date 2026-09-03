@@ -17,6 +17,8 @@ import { renderPlan } from '../../src/render.mjs';
 import { nextStage, pendingPageStages, assemble, findDuplicates, summarize } from '../../lib/runner.mjs';
 import { normalizePages } from '../../lib/edit.mjs';
 import { buildPack, packMarkdown, packCsv, IMAGE_CATEGORIES } from '../../src/pack.mjs';
+import { guidelineMarkdown, checkContrast } from '../../src/guideline.mjs';
+import { contrast } from '../../src/color.mjs';
 import { toBriefText, parseBriefText, missingRequired } from '../../lib/brief-form.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
@@ -152,6 +154,48 @@ function makeFakeModel(catalog) {
           production: [{ mark: '전용', title: '블록 설명은 쇼핑몰 기준입니다. ', detail: '서비스로 바꿔 읽어야 합니다.' }],
           assetsToCollect: ['세무사 프로필 사진'],
           budgetNote: '예산 안에서 무리가 없습니다.',
+        };
+      } else if (stage === '디자인 지침') {
+        value = {
+          name: 'tax-firm-quiet',
+          description: '읽는 사람이 판단에 필요한 것만 남기고 나머지를 덜어낸 화면.',
+          mood: ['차분한', '정확한', '군더더기 없는'],
+          colors: {
+            primary: '#1f4e79', primaryHover: '#173c5c',
+            ink: '#1a1a1a', inkMuted: '#5a5a5a', hairline: '#e2e2e2',
+            canvas: '#ffffff', surface: '#f7f7f8', onPrimary: '#ffffff',
+          },
+          typography: {
+            bodyFont: '프리텐다드', headingFont: '프리텐다드',
+            bodySize: 16, bodyWeight: 400, bodyLineHeight: 1.7, bodyLetterSpacing: '-0.01em',
+            scale: [
+              { role: 'display', size: 36, weight: 700 },
+              { role: 'title', size: 24, weight: 700 },
+              { role: 'caption', size: 13, weight: 400 },
+            ],
+            weights: [400, 700],
+          },
+          rounded: { sm: 4, md: 8, lg: 16, pill: 9999 },
+          spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 40, section: 72 },
+          components: [
+            { name: '주 버튼', spec: '배경 primary, 글자 onPrimary, 모서리 sm, 여백 12px 20px' },
+            { name: '보조 버튼', spec: '배경 canvas, 테두리 hairline, 글자 ink, 모서리 sm' },
+            { name: '카드', spec: '배경 surface, 테두리 hairline, 모서리 md, 안여백 lg' },
+            { name: '입력칸', spec: '배경 canvas, 테두리 hairline, 모서리 sm, 높이 44px' },
+          ],
+          dos: [
+            '누를 수 있는 것은 전부 primary 한 색으로 표시합니다.',
+            '본문은 16px 400 으로 고정하고 강조는 굵기 700 으로만 냅니다.',
+            '경계는 hairline 선으로 냅니다.',
+            '표와 목록의 세로 간격을 lg 로 통일합니다.',
+          ],
+          donts: [
+            '그라디언트를 쓰지 않습니다 — 배경은 단색이고, 신뢰는 여백이 만듭니다.',
+            '그림자를 쓰지 않습니다 — 경계는 선으로 냅니다.',
+            '굵기 400·700 밖의 값을 쓰지 않습니다 — 그 사이 값은 흐릿해 보입니다.',
+            '강조색 말고 다른 색을 강조에 쓰지 않습니다 — 색이 늘면 어디를 눌러야 할지 흐려집니다.',
+            '모서리를 정해진 네 단계 밖의 값으로 두지 않습니다 — 블록마다 달라 보입니다.',
+          ],
         };
       } else if (stage === '기술 검토') {
         value = { technical: [{ area: '속도', items: ['첫 화면 이미지는 200KB 이하로 압축'] }] };
@@ -409,8 +453,10 @@ async function main() {
   state = { ...state, advisories: { features: [] } };
   check('유의점 다음은 기술 검토', nextStage(state).key === 'technical');
   state = { ...state, technical: [{ area: '속도', items: [] }] };
-  check('기술 검토까지 끝나면 완료', nextStage(state) === null);
+  check('기술 검토 다음은 디자인 지침', nextStage(state).key === 'guideline');
   check('기술 검토가 유의점에 합쳐짐', assemble(state).advisories.technical.length === 1);
+  state = { ...state, guideline: { name: 'x' } };
+  check('디자인 지침까지 끝나면 완료', nextStage(state) === null);
 
   /* ── 섹션 편집: 화면에서 온 값을 다듬는 규칙 ──────────────── */
 
@@ -581,9 +627,48 @@ async function main() {
   });
   check('CSV 가 따옴표와 쉼표를 제대로 감쌈', quoted.includes('"따옴표 ""안"" 쓰기"') && quoted.includes('"a,b"'));
 
+  /* ── 디자인 지침 ─────────────────────────────────────────── */
+
+  const g = plan.guideline;
+  check('디자인 지침이 만들어짐', Boolean(g?.name));
+  check('디자인 지침이 마지막 단계에서 돎',
+    model.seen.at(-1).stage === '디자인 지침');
+  check('완성 시각이 찍힘', Boolean(plan.generatedAt));
+
+  check('읽을 수 있는 색 조합에는 문제가 없음', checkContrast(g).length === 0);
+
+  // 흰 바탕에 옅은 회색 글자 — 가장 흔한 실수. 반드시 걸려야 한다.
+  const unreadable = {
+    ...g,
+    colors: { ...g.colors, ink: '#bbbbbb', inkMuted: '#dddddd', onPrimary: '#88aacc' },
+  };
+  const found = checkContrast(unreadable);
+  check('안 읽히는 글자색을 잡아냄', found.length >= 3);
+  check('얼마나 모자란지 숫자로 알려 줌', found.some((x) => /\d\.\d:1/.test(x)));
+  check('색 값이 틀린 것도 잡아냄',
+    checkContrast({ colors: { ...g.colors, ink: '파랑' } }).some((x) => x.includes('읽을 수 없습니다')));
+
+  check('대비비 계산이 맞음', Math.round(contrast('#000000', '#ffffff')) === 21);
+  check('같은 색은 대비가 1', contrast('#123456', '#123456') === 1);
+
+  const gmd = guidelineMarkdown(g, { company: '테스트 세무법인' });
+  check('지침이 식스샵 형식(YAML 머리말)으로 나옴', gmd.startsWith('---\nversion: alpha'));
+  check('머리말에 colors 가 들어감', gmd.includes('colors:\n  primary: "#1f4e79"'));
+  check('머리말에 rounded·spacing 이 들어감',
+    gmd.includes('rounded:\n  sm: 4px') && gmd.includes('spacing:\n  xs: 4px'));
+  check('머리말이 닫힘', gmd.includes('---\n\n# 테스트 세무법인 디자인 지침'));
+  check('하지 말 것이 실림', gmd.includes('이렇게 하지 않습니다'));
+  check('금지 규칙에 이유가 붙어 있음', g.donts.every((d) => d.includes('—')));
+  check('글꼴을 확인하라고 적혀 있음', gmd.includes('식스샵에서 실제로 쓸 수 있는지'));
+
+  const badMd = guidelineMarkdown(unreadable, {});
+  check('안 읽히는 조합은 문서에도 적힘', badMd.includes('확인이 필요한 색 조합'));
+  check('읽히는 조합에는 그 묶음이 없음', !gmd.includes('확인이 필요한 색 조합'));
+
   const outDir = path.join(ROOT, 'out', 'selftest');
   await fs.mkdir(outDir, { recursive: true });
   await fs.writeFile(path.join(outDir, 'pack.md'), md);
+  await fs.writeFile(path.join(outDir, 'DESIGN.md'), gmd);
   await fs.writeFile(path.join(outDir, 'plan.html'), html);
 
   console.log(failures === 0 ? '\n전부 통과\n' : `\n실패 ${failures}건\n`);
