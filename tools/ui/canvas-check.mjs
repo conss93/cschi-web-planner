@@ -154,6 +154,60 @@ check(
   `${JSON.stringify(pointBefore)} vs ${JSON.stringify(pointAfter)}`,
 );
 
+/* ── 블록을 누르면 옆 패널이 열린다 ─────────────────────── */
+
+await page.click('text=전체 보기');
+await page.waitForTimeout(400);
+
+// 끌어서 옮긴 것은 클릭이 아니다
+await page.mouse.move(cx, cy);
+await page.mouse.down();
+await page.mouse.move(cx - 120, cy - 60, { steps: 6 });
+await page.mouse.up();
+await page.waitForTimeout(150);
+check('끌어서 옮긴 것은 패널을 열지 않음', (await page.locator('.slotpanel').count()) === 0);
+
+// 블록을 누르면 열린다
+const slab = page.locator('[data-slot="0:1"]');
+await slab.click({ position: { x: 20, y: 20 } });
+await page.waitForSelector('.slotpanel');
+check('블록을 누르면 옆 패널이 열림', true);
+check('그 자리가 몇 번째인지 보임', (await page.textContent('.slotpanel-head .where')).includes('02'));
+check('아직 저장할 것은 없음', await page.locator('nav .btn:not(.ghost)').isDisabled());
+
+// 고치면 저장 버튼이 살아난다
+await page.fill('.slotpanel .purpose', '손으로 고친 자리 이름');
+await page.waitForTimeout(150);
+check('고치면 저장 버튼이 살아남', !(await page.locator('nav .btn:not(.ghost)').isDisabled()));
+check(
+  '캔버스의 이름표도 같이 바뀜',
+  (await page.textContent('[data-slot="0:1"] .slab-label .what')) === '손으로 고친 자리 이름',
+);
+
+// 아래로 한 칸
+await page.click('.slotpanel .slotactions .icon >> nth=1');
+await page.waitForTimeout(200);
+check(
+  '아래로 옮기면 캔버스에서도 자리가 바뀜',
+  (await page.textContent('[data-slot="0:2"] .slab-label .what')) === '손으로 고친 자리 이름',
+);
+check('패널이 옮긴 자리를 따라감', (await page.textContent('.slotpanel-head .where')).includes('03'));
+
+// 다른 페이지로 보내기
+await page.selectOption('.slotpanel .sendto', { index: 1 });
+await page.waitForTimeout(250);
+check('다른 페이지로 보내면 패널이 닫힘', (await page.locator('.slotpanel').count()) === 0);
+check(
+  '보낸 자리가 그 페이지 맨 아래에 붙음',
+  (await page.textContent('[data-slot="1:4"] .slab-label .what')) === '손으로 고친 자리 이름',
+);
+
+// 되돌리기
+await page.click('text=되돌리기');
+await page.waitForTimeout(250);
+check('되돌리면 원래대로', (await page.locator('[data-slot="1:4"]').count()) === 0);
+check('되돌리면 저장할 것이 없어짐', await page.locator('nav .btn:not(.ghost)').isDisabled());
+
 console.log(fail === 0 ? '\n전부 통과\n' : `\n실패 ${fail}건\n`);
 await browser.close();
 process.exit(fail ? 1 : 0);
