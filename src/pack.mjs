@@ -11,6 +11,7 @@
  */
 
 import { blockLabel, previewUrls } from './catalog.mjs';
+import { aiPrompt, aiSpec, hasSpec } from './aiprompt.mjs';
 
 /** 이 분류의 블록은 그림이 있어야 자리가 찬다. */
 export const IMAGE_CATEGORIES = new Set([
@@ -30,8 +31,9 @@ const BUTTON = /\[([^\]\n]{1,40})\]/g;
 
 const lines = (s) => String(s ?? '').split('\n').map((l) => l.trim()).filter(Boolean);
 
-export function buildPack(data, catalog) {
+export function buildPack(data, catalog, { company = '' } = {}) {
   const ordered = [...(data.pages ?? [])].sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
+  const guideline = data.guideline ?? null;
 
   const pages = ordered.map((page) => ({
     index: page.index,
@@ -45,7 +47,7 @@ export function buildPack(data, catalog) {
       // fill 이 없는 것은 이 기능이 생기기 전에 만든 기획서다.
       const fill = s.fill ?? (s.blockId ? '마켓플레이스 블록' : '식스샵 기본 기능');
 
-      return {
+      const row = {
         at: at + 1,
         purpose: s.purpose ?? '',
         fill,
@@ -71,6 +73,18 @@ export function buildPack(data, catalog) {
         copy,
         note: String(s.note ?? ''),
       };
+
+      if (fill !== 'AI 블록') return row;
+
+      // AI 블록 자리에만 프롬프트가 붙는다. 색·모서리는 지침에서 오고,
+      // 지침이 아직 없으면 그 줄이 빠진 채로 나온다. 색을 지어내지 않는다.
+      return {
+        ...row,
+        spec: aiSpec(s),
+        // 배치 지시 없이 목적·메모만으로 만든 프롬프트인지. 손볼 자리다.
+        thinPrompt: !hasSpec(s),
+        prompt: aiPrompt({ ...row, ai: s.ai }, { guideline, company, page }),
+      };
     }),
   }));
 
@@ -83,6 +97,9 @@ export function buildPack(data, catalog) {
       slots: all.length,
       blocks: new Set(all.filter((s) => s.blockId).map((s) => s.blockId)).size,
       ai: all.filter((s) => s.fill === 'AI 블록').length,
+      // 배치 지시가 없어 목적·메모만으로 만든 프롬프트. 넣기 전에 손봐야 한다.
+      thinPrompts: all.filter((s) => s.thinPrompt).length,
+      guideline: Boolean(guideline),
       basic: all.filter((s) => s.fill === '식스샵 기본 기능').length,
       images: all.filter((s) => s.needsImage).length,
       tone: all.filter((s) => s.needsCustomTone).length,
@@ -114,6 +131,16 @@ export function packMarkdown(pack, { company, style, assets = [] } = {}) {
   out.push(
     `AI 블록으로 만들 자리 ${n.ai} · 식스샵 기본 기능 ${n.basic}`,
   );
+  if (n.ai > 0) {
+    out.push(
+      n.guideline
+        ? 'AI 블록 자리에는 프롬프트를 붙여 두었습니다. 스타일 참조에 디자인 지침을 물린 상태로 넣으세요.'
+        : '디자인 지침이 아직 없어 프롬프트에 색·모서리 값이 빠져 있습니다.',
+    );
+    if (n.thinPrompts > 0) {
+      out.push(`이 중 ${n.thinPrompts}개는 배치 지시 없이 만든 얇은 프롬프트입니다.`);
+    }
+  }
   out.push(
     `이미지 필요 ${n.images} · 톤 커스텀 ${n.tone} · 자료 미확정 ${n.pending} · 버튼 ${n.buttons}`,
   );
@@ -158,6 +185,19 @@ export function packMarkdown(pack, { company, style, assets = [] } = {}) {
         out.push(...lines(s.copy));
         out.push('```');
       }
+
+      if (s.prompt) {
+        out.push('');
+        out.push(
+          s.thinPrompt
+            ? '**AI 블록 프롬프트** — 배치 지시 없이 만든 것이라 얇습니다. 넣기 전에 손보세요.'
+            : '**AI 블록 프롬프트** — 식스샵 AI 블록 입력칸에 그대로 넣습니다.',
+        );
+        out.push('');
+        out.push('```');
+        out.push(...s.prompt.split('\n'));
+        out.push('```');
+      }
     }
   }
 
@@ -174,6 +214,7 @@ export function packCsv(pack) {
   const head = [
     '페이지', '순번', '자리', '채우는법', '블록', '계열', '공식파트너',
     '이미지필요', '톤커스텀', '자료미확정', '버튼', '문구', '메모', 'blockId', '미리보기',
+    'AI프롬프트',
   ];
 
   const rows = pack.pages.flatMap((page) =>
@@ -193,6 +234,7 @@ export function packCsv(pack) {
       s.note,
       s.blockId,
       s.previews.join(' '),
+      s.prompt ?? '',
     ]),
   );
 

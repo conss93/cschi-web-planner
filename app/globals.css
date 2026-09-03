@@ -257,6 +257,7 @@ legend {
 .packblock { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 14px; }
 .packblock .bname { color: var(--ink-80); }
 .packblock .bname.basic { color: var(--ink-48); }
+.packblock .bname.ai { color: var(--blue); }
 .packblock a { font-size: 12px; }
 .packmeta { margin: 0; font-size: 13px; color: var(--ink-48); max-width: 66ch; }
 
@@ -268,6 +269,15 @@ legend {
   padding: 12px 17px; background: var(--parchment); border-radius: var(--r-sm);
 }
 .icon.copy { width: auto; padding: 0 10px; height: 26px; flex: none; font-size: 12px; }
+
+/* AI 블록 프롬프트. 길어서 늘 펼쳐 두면 목록이 안 읽히므로 접어 둔다. */
+.aiprompt > summary {
+  cursor: pointer; font-size: 13px; color: var(--blue);
+  display: flex; align-items: center; gap: 8px;
+}
+.aiprompt > summary::marker { color: var(--ink-48); }
+.aiprompt[open] > summary { margin-bottom: 8px; }
+.aiprompt .packcopy pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
 
 /* ── 디자인 지침 ─────────────────────────────────────────────── */
 

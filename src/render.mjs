@@ -50,6 +50,23 @@ function chip(section) {
   return `<span class="${cls}"><span class="dot"></span>${esc(section.blockName)}${star}</span>`;
 }
 
+/**
+ * AI 블록으로 만들 자리의 배치 지시. 이 자리는 마켓플레이스 블록과 달리
+ * 미리보기가 없어서, 무엇이 어디에 놓이는지 글로 적어 두지 않으면 기획서만
+ * 봐서는 어떤 모양인지 알 수 없다. 실제 프롬프트는 콘텐츠 팩에 있다.
+ */
+function aiSpecLine(section) {
+  if (section.fill !== 'AI 블록') return '';
+  const a = section.ai ?? {};
+  const parts = [
+    a.layout && `배치 ${a.layout}`,
+    a.media && `이미지 ${a.media}`,
+    a.mobile && `모바일 ${a.mobile}`,
+  ].filter(Boolean);
+  if (!parts.length) return '';
+  return `<p class="slot-note">${esc(parts.join(' · '))}</p>`;
+}
+
 const sectionRow = (section, i) => `
   <li>
     <span class="ord">${String(i + 1).padStart(2, '0')}</span>
@@ -59,6 +76,7 @@ const sectionRow = (section, i) => `
         section.needsCustomTone ? '<span class="warn">톤 커스텀</span>' : ''
       }</p>
       ${section.note ? `<p class="slot-note">${esc(section.note)}</p>` : ''}
+      ${aiSpecLine(section)}
       ${section.copy ? `<p class="slot-copy">${esc(section.copy).replace(/\n/g, '<br>')}</p>` : ''}
     </div>
   </li>`;

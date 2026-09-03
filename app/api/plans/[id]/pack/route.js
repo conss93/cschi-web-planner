@@ -21,7 +21,7 @@ export async function GET(request, { params }) {
   const plan = await getPlan(id);
   if (!plan) return NextResponse.json({ error: '없는 기획서입니다.' }, { status: 404 });
 
-  const pack = buildPack(plan.data, catalog());
+  const pack = buildPack(plan.data, catalog(), { company: plan.company });
 
   if (format === 'json') {
     return NextResponse.json({

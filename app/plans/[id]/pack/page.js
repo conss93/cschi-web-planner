@@ -85,6 +85,7 @@ export default function PackPage({ params }) {
           <div><dt>페이지</dt><dd>{n.pages}</dd></div>
           <div><dt>자리</dt><dd>{n.slots}</dd></div>
           <div><dt>블록</dt><dd>{n.blocks}종</dd></div>
+          <div><dt>AI 블록</dt><dd>{n.ai}</dd></div>
           <div><dt>이미지 필요</dt><dd>{n.images}</dd></div>
           <div><dt>톤 커스텀</dt><dd>{n.tone}</dd></div>
           <div><dt>자료 미확정</dt><dd>{n.pending}</dd></div>
@@ -103,6 +104,23 @@ export default function PackPage({ params }) {
         각 자리의 <strong>미리보기</strong>를 열어 직접 확인하세요.
         {style ? ` 이 사이트는 ${style} 계열로 짰습니다.` : ''}
       </p>
+
+      {n.ai > 0 && (
+        <p className="notice">
+          {n.guideline ? (
+            <>
+              AI 블록 자리 {n.ai}개에 프롬프트를 붙여 두었습니다. 식스샵에서{' '}
+              <strong>스타일 참조에 디자인 지침을 물린 상태로</strong> 넣으세요.
+            </>
+          ) : (
+            <>
+              디자인 지침이 아직 없어 프롬프트에 색·모서리 값이 빠져 있습니다.{' '}
+              <a href={`/plans/${id}/guideline`}>지침</a>을 먼저 만드는 편이 낫습니다.
+            </>
+          )}
+          {n.thinPrompts > 0 && ` 이 중 ${n.thinPrompts}개는 배치 지시 없이 만든 얇은 프롬프트라 손봐야 합니다.`}
+        </p>
+      )}
 
       {assets?.length > 0 && (
         <section className="pack-section">
@@ -154,6 +172,8 @@ export default function PackPage({ params }) {
                           ))}
                           <Copy text={s.blockId} label="blockId 복사" />
                         </>
+                      ) : s.fill === 'AI 블록' ? (
+                        <span className="bname ai">AI 블록으로 제작 — 맞는 마켓플레이스 블록 없음</span>
                       ) : (
                         <span className="bname basic">식스샵 기본 기능 — 마켓플레이스 블록 아님</span>
                       )}
@@ -169,6 +189,19 @@ export default function PackPage({ params }) {
                         <pre>{s.copy}</pre>
                         <Copy text={s.copy} />
                       </div>
+                    )}
+
+                    {s.prompt && (
+                      <details className="aiprompt">
+                        <summary>
+                          AI 블록 프롬프트
+                          {s.thinPrompt && <span className="mark todo">손봐야 함</span>}
+                        </summary>
+                        <div className="packcopy">
+                          <pre>{s.prompt}</pre>
+                          <Copy text={s.prompt} label="프롬프트 복사" />
+                        </div>
+                      </details>
                     )}
                   </div>
                 </li>

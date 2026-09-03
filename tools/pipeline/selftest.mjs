@@ -128,24 +128,34 @@ function makeFakeModel(catalog) {
         };
       } else if (stage.startsWith('페이지 구성')) {
         const isHome = stage.includes('홈');
+        // AI 블록이 아닌 자리의 ai 는 네 칸 모두 빈 문자열이다.
+        const noSpec = { layout: '', media: '', mobile: '', interaction: '' };
         value = {
           sections: [
             { purpose: '전역 헤더', fill: '마켓플레이스 블록', blockId: header.blockId,
-              note: '로고와 메뉴', copy: '', needsCustomTone: false },
+              note: '로고와 메뉴', copy: '', needsCustomTone: false, ai: noSpec },
             isHome
               ? { purpose: '첫 화면', fill: '마켓플레이스 블록', blockId: banner.blockId,
-                  note: '사무실 실사진', copy: '설명부터 다릅니다', needsCustomTone: false }
+                  note: '사무실 실사진', copy: '설명부터 다릅니다', needsCustomTone: false,
+                  ai: { layout: '지워져야 한다', media: '', mobile: '', interaction: '' } }
               : { purpose: '상담 절차', fill: '마켓플레이스 블록', blockId: FAKE_ID,
-                  note: '없는 블록이라 AI 블록으로 돌아가야 함', copy: '', needsCustomTone: true },
+                  note: '없는 블록이라 AI 블록으로 돌아가야 함', copy: '', needsCustomTone: true,
+                  ai: noSpec },
             { purpose: '세무사 소개', fill: 'AI 블록', blockId: '',
-              note: '좌측에 얼굴 사진, 우측에 이름·약력 두 줄. 모바일에서는 사진이 위.',
-              copy: '', needsCustomTone: true },
+              note: '맡길 사람이 누구인지 보여 주는 자리',
+              copy: '김청새 세무사\n[상담 신청]', needsCustomTone: true,
+              ai: {
+                layout: '왼쪽 얼굴 사진 40%, 오른쪽 이름·약력 60%. 인물 2명을 세로로 반복',
+                media: '인물 사진 2장, 3:4 세로',
+                mobile: '사진 위, 글 아래 한 줄로',
+                interaction: '카드를 누르면 상세로. 나타나는 효과는 넣지 않음',
+              } },
             { purpose: '상담 문의', fill: '마켓플레이스 블록', blockId: form.blockId,
-              note: '동의 체크박스 필수', copy: '', needsCustomTone: false },
+              note: '동의 체크박스 필수', copy: '', needsCustomTone: false, ai: noSpec },
             { purpose: '칼럼 목록', fill: '식스샵 기본 기능', blockId: '',
-              note: '식스샵 기본 게시판', copy: '', needsCustomTone: false },
+              note: '식스샵 기본 게시판', copy: '', needsCustomTone: false, ai: noSpec },
             { purpose: '푸터', fill: '마켓플레이스 블록', blockId: footer.blockId,
-              note: '사업자 정보', copy: '', needsCustomTone: false },
+              note: '사업자 정보', copy: '', needsCustomTone: false, ai: noSpec },
           ],
         };
       } else if (stage === '기능과 유의점') {
@@ -275,11 +285,21 @@ async function main() {
     turned?.fill === 'AI 블록' && turned.blockId === '');
   check('돌린 자리는 톤 손질이 필요한 것으로 표시됨', turned?.needsCustomTone === true);
 
+  // 배치 지시는 AI 블록 자리에만 남는다. 다른 자리에 있으면 쓰이지도 않으면서
+  // 문서에만 새어 나온다.
+  const aiSection = slots.find((s) => s.purpose === '세무사 소개');
+  const marketSection = slots.find((s) => s.purpose === '첫 화면');
+  check('AI 블록 자리의 배치 지시가 남음', aiSection?.ai?.layout.includes('왼쪽 얼굴 사진'));
+  check('마켓플레이스 자리의 배치 지시는 지워짐', marketSection?.ai === undefined);
+
   console.log('\n─── 화면 ───');
   const html = renderPlan(plan);
   check('제목에 상호가 들어감', html.includes('테스트 세무법인 웹사이트 기획서'));
   check('블록 이름이 화면에 나옴', html.includes(plan.pages[0].sections[0].blockName));
   check('기본 기능 자리를 따로 표시', html.includes('식스샵 기본 기능'));
+  // AI 블록 자리는 미리보기가 없다. 어떤 모양인지 글로라도 있어야 한다.
+  check('AI 블록 자리의 배치가 기획서에도 보임', html.includes('배치 왼쪽 얼굴 사진'));
+  check('마켓플레이스 자리에는 배치 줄이 없음', !html.includes('배치 지워져야 한다'));
   check('확인할 질문이 실림', html.includes('주력 고객층은?'));
   check('페이지 수의 근거가 실림', html.includes('페이지를 이렇게 나눈 이유'));
   check('기술 검토 섹션이 있음', html.includes('기술 검토'));
@@ -530,6 +550,23 @@ async function main() {
   check('블록을 안 쓰는 자리는 배치로 세지 않음',
     summarize({ ...before, pages: switched.pages }).placements === 1);
 
+  // 편집 화면은 배치 지시를 만지지 않는다. 한 번 저장했다고 프롬프트가
+  // 사라지면 AI 블록 자리를 다시 짜야 한다.
+  const kept = normalizePages(
+    before,
+    [{ index: 0, sections: [
+      { purpose: '직원 소개', fill: 'AI 블록', blockId: '', note: '고침',
+        ai: { layout: '왼쪽 사진 40%', media: '3:4 세로', mobile: '위아래로', interaction: '없음' } },
+      { purpose: '헤더', fill: '마켓플레이스 블록', blockId: real.blockId,
+        ai: { layout: '남으면 안 됨', media: '', mobile: '', interaction: '' } },
+    ] }],
+    catalog,
+  );
+  check('편집해도 AI 블록의 배치 지시가 남음',
+    kept.pages[0].sections[0].ai?.layout === '왼쪽 사진 40%');
+  check('편집 뒤에도 마켓플레이스 자리에는 배치 지시가 없음',
+    kept.pages[0].sections[1].ai === undefined);
+
   /* ── 콘텐츠 팩 ────────────────────────────────────────────── */
 
   const banner = pick(catalog, '메인 배너');   // 그림이 있어야 차는 자리
@@ -626,6 +663,73 @@ async function main() {
     ] }],
   });
   check('CSV 가 따옴표와 쉼표를 제대로 감쌈', quoted.includes('"따옴표 ""안"" 쓰기"') && quoted.includes('"a,b"'));
+
+  /* ── AI 블록 프롬프트 ─────────────────────────────────────── */
+
+  const gl = plan.guideline;
+  const spec = {
+    layout: '왼쪽 사진 40%, 오른쪽 이름·약력 60%',
+    media: '인물 사진 2장, 3:4 세로',
+    mobile: '사진 위, 글 아래 한 줄로',
+    interaction: '카드를 누르면 상세로. 나타나는 효과는 넣지 않음',
+  };
+  const promptData = {
+    guideline: gl,
+    pages: [{ index: 0, title: '소개', slug: 'about', sections: [
+      { purpose: '배너', fill: '마켓플레이스 블록', blockId: banner.blockId, note: '', copy: '' },
+      { purpose: '세무사 소개', fill: 'AI 블록', blockId: '', note: '맡길 사람을 보여 주는 자리',
+        copy: '김청새 세무사\n[상담 신청]', ai: spec },
+      { purpose: '칼럼 목록', fill: 'AI 블록', blockId: '', note: '지시 없이 목적만 있는 자리', copy: '' },
+    ] }] };
+  const withPrompt = buildPack(promptData, catalog, { company: '청새세무법인' });
+  const [, aiSlot, thinSlot] = withPrompt.pages[0].sections;
+
+  check('마켓플레이스 블록 자리에는 프롬프트가 없음',
+    withPrompt.pages[0].sections[0].prompt === undefined);
+  check('AI 블록 자리에 프롬프트가 붙음', typeof aiSlot.prompt === 'string' && aiSlot.prompt.length > 0);
+  check('프롬프트가 무엇을 만들지로 시작함', aiSlot.prompt.startsWith('세무사 소개 섹션을 만들어 주세요.'));
+  check('프롬프트에 배치가 들어감', aiSlot.prompt.includes('왼쪽 사진 40%'));
+  check('프롬프트에 이미지 비율이 들어감', aiSlot.prompt.includes('3:4 세로'));
+  check('프롬프트에 모바일에서 접히는 모양이 들어감', aiSlot.prompt.includes('사진 위, 글 아래'));
+  check('프롬프트에 상호와 페이지가 들어감',
+    aiSlot.prompt.includes('청새세무법인') && aiSlot.prompt.includes('소개 페이지'));
+  check('프롬프트가 문구를 그대로 담음', aiSlot.prompt.includes('김청새 세무사'));
+  check('프롬프트가 문구를 바꾸지 말라고 못박음', aiSlot.prompt.includes('늘리거나 바꾸지 마세요'));
+  check('프롬프트가 버튼을 따로 알려 줌', aiSlot.prompt.includes('버튼: 상담 신청'));
+  // [ ] 는 우리 문서의 버튼 표기다. 그대로 두면 대괄호까지 화면에 찍힌다.
+  check('문구에서 버튼 표기의 대괄호를 텀', !aiSlot.prompt.includes('[상담 신청]'));
+  check('버튼 글자 자체는 문구에 남음', aiSlot.prompt.includes('\n상담 신청\n'));
+
+  // 색은 코드가 지침에서 가져온다. 모델이 프롬프트에 따로 적으면 어긋난다.
+  check('프롬프트의 색이 지침 값 그대로임', aiSlot.prompt.includes(gl.colors.primary));
+  check('프롬프트에 모서리 값이 들어감', aiSlot.prompt.includes(`버튼 ${gl.rounded.sm}px`));
+  check('프롬프트에 금지 규칙이 들어감', aiSlot.prompt.includes(gl.donts[0]));
+  check('금지 규칙을 다 싣지는 않음',
+    gl.donts.length > 4 && !aiSlot.prompt.includes(gl.donts[4]));
+  check('프롬프트가 어느 지침을 물릴지 알려 줌', aiSlot.prompt.includes(`「${gl.name}」`));
+
+  check('배치 지시가 있으면 얇은 프롬프트가 아님', aiSlot.thinPrompt === false);
+  check('목적만 있는 자리는 얇다고 표시함', thinSlot.thinPrompt === true);
+  check('얇은 것도 프롬프트는 나옴', thinSlot.prompt.includes('칼럼 목록 섹션을 만들어 주세요.'));
+  check('문구가 없으면 지어내지 말라고 적힘', thinSlot.prompt.includes('자리 표시용으로'));
+  check('얇은 프롬프트를 세어 알려 줌', withPrompt.summary.thinPrompts === 1);
+  check('지침이 있다고 표시함', withPrompt.summary.guideline === true);
+
+  // 지침이 아직 없는 기획서. 색을 지어내면 그대로 잘못 만들어진다.
+  const noGuide = buildPack({ ...promptData, guideline: null }, catalog, { company: 'x' });
+  const noGuideSlot = noGuide.pages[0].sections[1];
+  check('지침이 없으면 색 줄이 빠짐', !noGuideSlot.prompt.includes('- 색:'));
+  check('지침이 없어도 배치는 남음', noGuideSlot.prompt.includes('왼쪽 사진 40%'));
+  check('지침이 없다고 표시함', noGuide.summary.guideline === false);
+
+  const promptMd = packMarkdown(withPrompt, { company: '청새세무법인' });
+  check('마크다운에 프롬프트가 실림', promptMd.includes('AI 블록 프롬프트'));
+  check('마크다운이 스타일 참조를 일러 줌', promptMd.includes('스타일 참조에 디자인 지침'));
+  check('마크다운이 얇은 프롬프트를 짚어 줌', promptMd.includes('넣기 전에 손보세요'));
+
+  const promptCsv = packCsv(withPrompt);
+  check('CSV 에 AI프롬프트 열이 있음', promptCsv.split('\r\n')[0].endsWith('AI프롬프트'));
+  check('CSV 프롬프트 칸이 따옴표로 감싸짐', promptCsv.includes('"세무사 소개 섹션을 만들어 주세요.'));
 
   /* ── 디자인 지침 ─────────────────────────────────────────── */
 
