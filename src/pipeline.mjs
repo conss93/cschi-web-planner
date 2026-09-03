@@ -195,7 +195,98 @@ ${JSON.stringify(strategy, null, 1)}`,
   });
 }
 
-/* ── 4단계: 페이지별 섹션 구성 ────────────────────────────────── */
+/* ── 4단계: 마케팅·UX 검토 ────────────────────────────────────── */
+
+/**
+ * 전략과 사이트맵은 "무엇을 만들까"를 정한다. 여기서는 두 가지를 더 본다.
+ *
+ * 하나는 브랜드 마케터의 눈이다. 이 업종 사이트가 다 하는 말을 그대로 쓰면
+ * 아무 말도 안 한 것과 같다. 무엇을 피하고 무엇을 우리만 말할 수 있는지,
+ * 문의 직전에 드는 망설임을 어디서 풀지를 정한다.
+ *
+ * 다른 하나는 UI·UX 의 눈이다. 어디서 들어와 무엇을 기대하고 어디서 나가는지.
+ * 이건 사이트맵을 그린 다음에야 볼 수 있고, 페이지를 짜기 전에 알아야 한다.
+ * 그래서 이 자리에 둔다.
+ */
+const ReviewSchema = z.object({
+  market: z.object({
+    // 남들 다 하는 말. 여기 걸리면 문구를 다시 쓴다.
+    sameness: z.array(z.string()),
+    wedge: z.object({ claim: z.string(), evidence: z.string() }),
+    // 하고 싶은 주장인데 뒷받침할 자료가 없는 것. 받아야 할 자료가 된다.
+    proofGaps: z.array(z.object({ claim: z.string(), need: z.string() })),
+    // 문의 직전의 망설임과 그것을 푸는 자리.
+    objections: z.array(
+      z.object({ doubt: z.string(), answerAt: z.string(), how: z.string() }),
+    ),
+  }),
+  ux: z.object({
+    entries: z.array(
+      z.object({ from: z.string(), expects: z.string(), firstScreen: z.string() }),
+    ),
+    flows: z.array(
+      z.object({ name: z.string(), steps: z.array(z.string()), friction: z.string() }),
+    ),
+    dropoffs: z.array(z.object({ where: z.string(), why: z.string(), fix: z.string() })),
+    mobile: z.array(z.string()),
+  }),
+});
+
+export async function stageReview(model, { brief, strategy, architecture }) {
+  return model.generate({
+    stage: '마케팅·UX 검토',
+    role: ROLE,
+    schema: ReviewSchema,
+    task: `사이트맵까지 나왔습니다. 페이지를 짜기 전에 두 관점으로 검토하세요.
+
+## 브랜드 마케터로서
+
+sameness — 이 업종 사이트가 하나같이 쓰는 말을 3~5개 적으세요. "믿을 수
+있는", "최고의 서비스", "고객 만족" 같은 것들입니다. 여기 걸리는 표현은
+쓰나 마나이므로 이후 문구에서 뺍니다. 이 업종에서 실제로 흔한 말을 쓰세요.
+
+wedge — 이 고객만 할 수 있는 말 하나. evidence 에 브리프의 어느 사실에서
+나왔는지 적으세요. 브리프에 근거가 없으면 지어내지 말고, claim 을
+"아직 못 정함"으로 두고 evidence 에 무엇을 확인해야 하는지 적으세요.
+
+proofGaps — 하고 싶은 주장인데 뒷받침할 자료가 아직 없는 것. need 에
+고객사에서 무엇을 받아야 하는지 적으세요.
+
+objections — 방문자가 문의 버튼 앞에서 머뭇거리는 이유 3~5개. answerAt 에
+사이트맵의 어느 페이지에서 풀지, how 에 어떻게 푸는지 적으세요. 없는
+페이지를 지어내지 마세요.
+
+## UI·UX 전문가로서
+
+entries — 유입 경로별로 봅니다. 브리프의 현재 채널을 먼저 보세요. 그 경로로
+온 사람이 무엇을 기대하는지(expects), 첫 화면이 무엇을 해내야 하는지
+(firstScreen). 경로가 하나뿐이면 하나만 쓰세요. 있지도 않은 광고나 채널을
+지어내지 마세요.
+
+flows — 주요 흐름 2~3개. steps 는 실제 페이지 이름으로 이어 쓰세요.
+friction 에 그 흐름에서 걸리는 지점 하나.
+
+dropoffs — 방문자가 나가 버리는 지점 2~4개. where 는 페이지나 자리 이름,
+why 는 나가는 이유, fix 는 구성으로 막는 방법.
+
+mobile — 모바일에서 특히 다르게 봐야 할 것 2~4개. 화면이 좁아진다는
+일반론 말고, 이 사이트의 이 내용에서 무엇이 문제가 되는지 쓰세요.
+
+전체에서, 어느 업종에나 해당하는 말은 쓰지 마세요. 브리프와 사이트맵에
+있는 사실에서만 끌어내세요.
+
+--- 브리프 ---
+${JSON.stringify(brief, null, 1)}
+
+--- 전략 ---
+${JSON.stringify(strategy, null, 1)}
+
+--- 사이트맵 ---
+${JSON.stringify(architecture, null, 1)}`,
+  });
+}
+
+/* ── 5단계: 페이지별 섹션 구성 ────────────────────────────────── */
 
 const PageSchema = z.object({
   sections: z.array(
@@ -209,7 +300,7 @@ const PageSchema = z.object({
   ),
 });
 
-export async function stagePage(model, { catalog, brief, strategy, page, blockMenu }) {
+export async function stagePage(model, { catalog, brief, strategy, review, page, blockMenu }) {
   return model.generate({
     stage: `페이지 구성 · ${page.title}`,
     role: ROLE,
@@ -234,6 +325,7 @@ ${(page.avoid ?? []).map((c) => `- ${c}`).join('\n') || '- (없음)'}
 - note 는 그 블록을 고른 이유나 제작 시 주의점 한두 문장.
 - copy 는 그 섹션에 들어갈 실제 문구 예시. 문구가 필요 없는 섹션은 빈 문자열.
   브리프에 없는 수치나 실적은 넣지 마세요.
+  검토의 sameness 에 걸린 표현은 쓰지 마세요. 남들 다 하는 말이라 쓰나 마납니다.
 - needsCustomTone 은 그 블록이 ${strategy.style} 계열이 아니라서 색·여백을
   맞추는 커스텀이 필요하면 true.
 
@@ -241,11 +333,17 @@ ${(page.avoid ?? []).map((c) => `- ${c}`).join('\n') || '- (없음)'}
 ${JSON.stringify(brief, null, 1)}
 
 --- 전략 ---
-${JSON.stringify(strategy, null, 1)}`,
+${JSON.stringify(strategy, null, 1)}
+${review ? `
+--- 마케팅·UX 검토 ---
+이 페이지에서 풀어야 할 망설임, 이 페이지가 걸린 이탈 지점, 유입별 첫 화면
+요구를 반영하세요. 다른 페이지 몫은 그 페이지에 맡기고 여기서는 다루지 않습니다.
+
+${JSON.stringify(review, null, 1)}` : ''}`,
   });
 }
 
-/* ── 5단계: 기능과 유의점 ─────────────────────────────────────── */
+/* ── 6단계: 기능과 유의점 ─────────────────────────────────────── */
 
 // 한 번에 다 받으면 출력이 길어 100초를 넘긴다. 서버리스 함수가 버티는
 // 시간을 넘기므로 둘로 나눈다. 앞은 제작 진행, 뒤는 기술 점검.
@@ -309,7 +407,7 @@ ${used.join('\n')}`,
   });
 }
 
-/* ── 6단계: 기술 검토 ─────────────────────────────────────────── */
+/* ── 7단계: 기술 검토 ─────────────────────────────────────────── */
 
 export async function stageTechnical(model, { brief, strategy, pages, blockMenu }) {
   const custom = pages.flatMap((p) =>
@@ -386,11 +484,14 @@ export async function runPipeline({ model, catalog, briefText, onStage = () => {
   // 선택이 정확하고, 이 문자열이 이후 모든 호출의 캐시 구간이 된다.
   const blockMenu = renderBlockMenu(catalog, { style: strategy.style });
 
+  onStage('마케팅·UX 검토');
+  const review = await stageReview(model, { brief, strategy, architecture });
+
   onStage(`페이지 구성 (${architecture.pages.length}개 동시 진행)`);
   const pages = await Promise.all(
     architecture.pages.map(async (page) => ({
       ...page,
-      ...(await stagePage(model, { catalog, brief, strategy, page, blockMenu })),
+      ...(await stagePage(model, { catalog, brief, strategy, review, page, blockMenu })),
     })),
   );
 
@@ -408,6 +509,7 @@ export async function runPipeline({ model, catalog, briefText, onStage = () => {
     brief,
     strategy,
     architecture,
+    review,
     pages,
     advisories,
     problems,

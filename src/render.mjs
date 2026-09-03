@@ -77,7 +77,7 @@ const globalsBlock = (globals) =>
  *   웹 화면 안에 끼워 넣을 때는 false 로 두어 문서 제목을 중복시키지 않는다.
  */
 export function renderPlan(plan, { standalone = true } = {}) {
-  const { brief, strategy, architecture, pages, advisories, counts } = plan;
+  const { brief, strategy, architecture, review, pages, advisories, counts } = plan;
 
   return `${standalone ? `<title>${esc(brief.companyName)} 웹사이트 기획서</title>\n` : ''}<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -254,8 +254,53 @@ a{color:inherit;text-decoration:none}
   <p class="lead">${esc(strategy.styleRunnerUp)}</p>
 </section>
 
+${review ? `<section>
+  <h2><span class="num">03</span>검토</h2>
+  <h3>이 업종에서 이미 닳은 말</h3>
+  <p class="lead">아래 표현은 어느 사이트에나 있어 읽는 사람에게 아무 판단도 주지 못합니다. 원고에서 뺍니다.</p>
+  <ul class="plain">${(review.market?.sameness ?? []).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+
+  <h3>이 고객만 할 수 있는 말</h3>
+  <div class="card"><p style="margin:0 0 6px"><strong>${esc(review.market?.wedge?.claim)}</strong></p>
+  <p class="slot-note" style="margin:0">${esc(review.market?.wedge?.evidence)}</p></div>
+
+  ${(review.market?.objections ?? []).length ? `<h3>문의 직전의 망설임</h3>
+  <div class="scroller"><table>
+    <thead><tr><th>망설임</th><th>푸는 자리</th><th>푸는 방법</th></tr></thead>
+    <tbody>${review.market.objections
+      .map((o) => `<tr><td><strong>${esc(o.doubt)}</strong></td><td>${esc(o.answerAt)}</td><td>${esc(o.how)}</td></tr>`)
+      .join('')}</tbody>
+  </table></div>` : ''}
+
+  ${(review.market?.proofGaps ?? []).length ? `<h3>근거가 아직 없는 주장</h3>
+  <ul class="plain">${review.market.proofGaps
+    .map((g) => `<li><strong>${esc(g.claim)}</strong> — ${esc(g.need)}</li>`)
+    .join('')}</ul>` : ''}
+
+  ${(review.ux?.entries ?? []).length ? `<h3>어디서 들어와 무엇을 기대하는가</h3>
+  <div class="scroller"><table>
+    <thead><tr><th>유입</th><th>기대</th><th>첫 화면이 해야 할 일</th></tr></thead>
+    <tbody>${review.ux.entries
+      .map((e) => `<tr><td><strong>${esc(e.from)}</strong></td><td>${esc(e.expects)}</td><td>${esc(e.firstScreen)}</td></tr>`)
+      .join('')}</tbody>
+  </table></div>` : ''}
+
+  ${(review.ux?.flows ?? []).length ? `<h3>주요 흐름</h3>
+  <ul class="plain">${review.ux.flows
+    .map((f) => `<li><strong>${esc(f.name)}</strong><br><span class="mono">${(f.steps ?? []).map(esc).join(' → ')}</span><br>${esc(f.friction)}</li>`)
+    .join('')}</ul>` : ''}
+
+  ${(review.ux?.dropoffs ?? []).length ? `<h3>이탈이 나는 자리</h3>
+  ${review.ux.dropoffs
+    .map((d) => `<div class="flag"><span class="mark">이탈</span><p><strong>${esc(d.where)}</strong>${esc(d.why)} → ${esc(d.fix)}</p></div>`)
+    .join('')}` : ''}
+
+  ${(review.ux?.mobile ?? []).length ? `<h3>모바일에서 다르게 볼 것</h3>
+  <ul class="plain">${review.ux.mobile.map((m) => `<li>${esc(m)}</li>`).join('')}</ul>` : ''}
+</section>
+` : ''}
 <section>
-  <h2><span class="num">03</span>사이트맵</h2>
+  <h2><span class="num">${review ? '04' : '03'}</span>사이트맵</h2>
   <div class="sitemap"><ul>${architecture.pages
     .map(
       (p) => `<li><span class="slug">${esc(p.slug)}</span><div><span class="label">${esc(p.title)}</span>
@@ -271,7 +316,7 @@ a{color:inherit;text-decoration:none}
 </section>
 
 <section>
-  <h2><span class="num">04</span>페이지 구성</h2>
+  <h2><span class="num">${review ? '05' : '04'}</span>페이지 구성</h2>
   <p class="lead">각 줄이 하나의 블록입니다. ★는 식스샵 공식 파트너 블록,
   회색 칩은 스타일 계열이 없는 커뮤니티 블록입니다.</p>
   ${globalsBlock(plan.globals)}
@@ -279,7 +324,7 @@ a{color:inherit;text-decoration:none}
 </section>
 
 <section>
-  <h2><span class="num">05</span>기능</h2>
+  <h2><span class="num">${review ? '06' : '05'}</span>기능</h2>
   <ul class="checklist">${advisories.features
     .map(
       (f) => `<li><span class="tag${f.level === '필수' ? ' must' : ''}">${esc(f.level)}</span>
@@ -289,7 +334,7 @@ a{color:inherit;text-decoration:none}
 </section>
 
 <section>
-  <h2><span class="num">06</span>제작 유의점</h2>
+  <h2><span class="num">${review ? '07' : '06'}</span>제작 유의점</h2>
   ${advisories.production
     .map(
       (c) => `<div class="flag"><span class="mark">${esc(c.mark)}</span>
@@ -303,7 +348,7 @@ a{color:inherit;text-decoration:none}
 </section>
 
 <section>
-  <h2><span class="num">07</span>기술 검토</h2>
+  <h2><span class="num">${review ? '08' : '07'}</span>기술 검토</h2>
   ${advisories.technical
     .map(
       (t) => `<h3>${esc(t.area)}</h3><ul class="plain">${t.items

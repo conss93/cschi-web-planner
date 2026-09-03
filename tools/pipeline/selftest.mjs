@@ -90,6 +90,26 @@ function makeFakeModel(catalog) {
               covers: ['문의 폼'], avoid: ['서비스 상세 — 홈이 맡음'] },
           ],
         };
+      } else if (stage === '마케팅·UX 검토') {
+        value = {
+          market: {
+            sameness: ['믿을 수 있는 파트너', '고객 만족을 최우선으로', '풍부한 경험'],
+            wedge: {
+              claim: '세무사가 직접 상담합니다',
+              evidence: '브리프의 규모 항목 — 세무사 2명에 직원 3명이라 직접 응대가 가능합니다',
+            },
+            proofGaps: [{ claim: '빠른 회신', need: '실제 평균 회신 시간' }],
+            objections: [
+              { doubt: '비용이 얼마나 나올지 모르겠다', answerAt: '상담 안내', how: '구간을 밝힙니다' },
+            ],
+          },
+          ux: {
+            entries: [{ from: '블로그', expects: '글을 쓴 사람이 누구인지', firstScreen: '세무사 실명과 얼굴' }],
+            flows: [{ name: '문의까지', steps: ['홈', '상담 안내'], friction: '전화번호가 푸터에만 있음' }],
+            dropoffs: [{ where: '홈 첫 화면', why: '무슨 일을 하는지 안 보임', fix: '한 줄로 먼저 답합니다' }],
+            mobile: ['전화 버튼이 한 손에 닿는 위치인지'],
+          },
+        };
       } else if (stage.startsWith('페이지 구성')) {
         const isHome = stage.includes('홈');
         value = {
@@ -166,6 +186,32 @@ async function main() {
   check('확인할 질문이 실림', html.includes('주력 고객층은?'));
   check('페이지 수의 근거가 실림', html.includes('페이지를 이렇게 나눈 이유'));
   check('기술 검토 섹션이 있음', html.includes('기술 검토'));
+
+  check('검토 섹션이 실림', html.includes('이 업종에서 이미 닳은 말'));
+  check('닳은 표현이 그대로 나옴', html.includes('고객 만족을 최우선으로'));
+  check('우리만 할 수 있는 말과 근거가 함께 나옴',
+    html.includes('세무사가 직접 상담합니다') && html.includes('세무사 2명에 직원 3명'));
+  check('망설임과 푸는 자리가 표로 나옴', html.includes('문의 직전의 망설임'));
+  check('유입별 첫 화면이 나옴', html.includes('어디서 들어와 무엇을 기대하는가'));
+  check('흐름이 화살표로 이어짐', html.includes('홈 → 상담 안내'));
+  check('이탈 지점이 나옴', html.includes('이탈이 나는 자리'));
+  check('모바일 항목이 나옴', html.includes('모바일에서 다르게 볼 것'));
+  check('검토가 들어가면 사이트맵이 04 로 밀림', html.includes('>04</span>사이트맵'));
+
+  // 검토 결과가 페이지 단계 프롬프트에 실제로 들어가야 한다.
+  const pageTasks = model.seen.filter((x) => x.stage.startsWith('페이지 구성')).map((x) => x.task);
+  check('페이지 단계가 검토 결과를 받음', pageTasks.every((t) => t.includes('마케팅·UX 검토')));
+  check('닳은 표현을 쓰지 말라는 지시가 붙음', pageTasks.every((t) => t.includes('sameness')));
+  check('검토가 사이트맵 뒤 페이지 앞에서 돎',
+    model.seen.findIndex((x) => x.stage === '마케팅·UX 검토') >
+      model.seen.findIndex((x) => x.stage === '사이트맵') &&
+    model.seen.findIndex((x) => x.stage === '마케팅·UX 검토') <
+      model.seen.findIndex((x) => x.stage.startsWith('페이지 구성')));
+
+  // 검토가 없는 옛 기획서도 그대로 열려야 한다.
+  const old = renderPlan({ ...plan, review: undefined });
+  check('검토 없는 옛 기획서도 열림', old.includes('>03</span>사이트맵'));
+  check('그때는 검토 섹션이 없음', !old.includes('이 업종에서 이미 닳은 말'));
   check('밝은 테마 색이 정의됨', html.includes(':root{--paper:'));
   check('어두운 테마도 정의됨', html.includes('prefers-color-scheme:dark'));
   check('본문 배경을 직접 칠함', html.includes('background:var(--paper)'));
@@ -202,8 +248,14 @@ async function main() {
   console.log('\n─── 동시 실행 ───');
   const arch = { pages: [{ title: 'A' }, { title: 'B' }, { title: 'C' }] };
 
+  // 사이트맵까지만 나온 상태 — 페이지보다 검토가 먼저다
+  check(
+    '사이트맵 다음은 마케팅·UX 검토',
+    nextStage({ brief: {}, strategy: {}, architecture: arch }).key === 'review',
+  );
+
   // 아직 아무 페이지도 안 끝난 상태
-  let state = { brief: {}, strategy: {}, architecture: arch, pages: [] };
+  let state = { brief: {}, strategy: {}, architecture: arch, review: {}, pages: [] };
   check('남은 페이지 3개를 모두 내놓음', pendingPageStages(state).length === 3);
   check('다음 단계는 첫 페이지', nextStage(state).key === 'page:0');
 

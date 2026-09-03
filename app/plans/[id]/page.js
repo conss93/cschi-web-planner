@@ -3,11 +3,14 @@
 import { useCallback, useEffect, useRef, useState, use } from 'react';
 import { renderPlan } from '../../../src/render.mjs';
 
-const STEPS = ['브리프 정리', '전략과 톤', '사이트맵', '페이지 구성', '기능과 유의점', '기술 검토'];
+const STEPS = [
+  '브리프 정리', '전략과 톤', '사이트맵', '마케팅·UX 검토',
+  '페이지 구성', '기능과 유의점', '기술 검토',
+];
 
 /** 지금 도는 단계가 여섯 묶음 중 어디에 해당하는지. */
 function stepIndex(label = '') {
-  if (label.startsWith('페이지 구성')) return 3;
+  if (label.startsWith('페이지 구성')) return 4;
   const found = STEPS.indexOf(label);
   return found === -1 ? 0 : found;
 }
@@ -206,7 +209,7 @@ export default function PlanPage({ params }) {
               <li key={label} data-state={i < current ? 'done' : i === current ? 'now' : 'todo'}>
                 <span className="dot" />
                 {label}
-                {i === 3 && i === current && stage?.progress ? ` (${stage.progress})` : ''}
+                {i === 4 && i === current && stage?.progress ? ` (${stage.progress})` : ''}
               </li>
             ))}
           </ul>
