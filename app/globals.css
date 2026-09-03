@@ -61,6 +61,14 @@
 
 * { box-sizing: border-box; }
 
+/*
+ * 상단 바를 화면 전체 폭으로 깔기 위해 본문 폭 밖으로 나가는 조각을 쓴다.
+ * 그 조각이 가로 스크롤을 만들어, 넓힐 내용이 없는데도 가로 막대가 생겼다.
+ * clip 은 넘치는 부분을 잘라 내되 스크롤 상자를 만들지 않아서, hidden 과
+ * 달리 상단 바의 sticky 가 그대로 산다.
+ */
+html, body { overflow-x: clip; }
+
 body {
   margin: 0;
   background: var(--canvas);
@@ -86,7 +94,8 @@ a:hover { text-decoration: underline; }
   min-height: 52px; padding: 8px 0; margin-bottom: 48px;
 }
 .topbar::before {
-  content: ""; position: absolute; inset: 0 -50vw; z-index: -1;
+  /* 가운데 정렬된 본문에서 화면 양 끝까지. 여분은 위의 clip 이 잘라 낸다. */
+  content: ""; position: absolute; inset: 0 calc(50% - 50vw); z-index: -1;
   background: color-mix(in srgb, var(--parchment) 80%, transparent);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);

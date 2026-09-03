@@ -13,7 +13,8 @@
     "test:pipeline": "node tools/pipeline/selftest.mjs",
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test:canvas": "node tools/ui/canvas-check.mjs"
   },
   "devDependencies": {
     "playwright": "^1.49.0"

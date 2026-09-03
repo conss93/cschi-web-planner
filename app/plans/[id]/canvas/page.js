@@ -110,24 +110,44 @@ export default function CanvasPage({ params }) {
     [zoomAt],
   );
 
-  const onWheel = (e) => {
-    const box = frame.current.getBoundingClientRect();
-    if (e.ctrlKey || e.metaKey) {
-      zoomAt(Math.exp(-e.deltaY / 260), e.clientX - box.left, e.clientY - box.top);
-      return;
-    }
-    setView((v) => ({ ...v, x: v.x - e.deltaX, y: v.y - e.deltaY }));
-  };
-
-  // 휠 확대는 기본 동작(브라우저 확대)을 막아야 하는데, React 의 onWheel 은
-  // 수동 리스너라 막을 수 없다. 그래서 직접 붙인다.
+  /**
+   * 휠은 직접 붙인다. React 의 onWheel 은 기본 동작을 막을 수 없어서, 그대로
+   * 두면 캔버스가 움직이는 동시에 브라우저 화면도 같이 움직이거나 확대된다.
+   *
+   * plan 을 의존성에 두는 것이 중요하다. 불러오는 동안에는 캔버스 자체가
+   * 화면에 없어서, 한 번만 붙이면 붙을 대상이 없는 채로 끝난다.
+   */
   useEffect(() => {
     const el = frame.current;
-    if (!el) return;
-    const stop = (e) => e.preventDefault();
-    el.addEventListener('wheel', stop, { passive: false });
-    return () => el.removeEventListener('wheel', stop);
-  }, []);
+    if (!el) return undefined;
+
+    const onWheel = (e) => {
+      e.preventDefault();
+
+      // 휠 한 칸을 픽셀로 주는 기기도, 줄 수로 주는 기기도 있다.
+      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
+      const dx = e.deltaX * unit;
+      const dy = e.deltaY * unit;
+
+      if (e.ctrlKey || e.metaKey) {
+        const box = el.getBoundingClientRect();
+        // 휠 한 칸(100)에 약 1.2배. 더 가파르면 몇 칸에 끝까지 가 버린다.
+        zoomAt(Math.exp(-dy / 550), e.clientX - box.left, e.clientY - box.top);
+        return;
+      }
+
+      // Shift+휠은 가로 이동이다. 브라우저에 따라 deltaX 로 오기도 하고
+      // deltaY 에 shiftKey 만 붙어 오기도 해서 둘 다 받는다.
+      if (e.shiftKey && !dx) {
+        setView((v) => ({ ...v, x: v.x - dy }));
+        return;
+      }
+      setView((v) => ({ ...v, x: v.x - dx, y: v.y - dy }));
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [plan, zoomAt]);
 
   const onPointerDown = (e) => {
     if (e.button !== 0) return;
@@ -201,7 +221,6 @@ export default function CanvasPage({ params }) {
       <div
         className="canvas-frame"
         ref={frame}
-        onWheel={onWheel}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
