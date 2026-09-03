@@ -181,6 +181,19 @@ border-bottom:1px solid var(--rule-soft);align-items:baseline}
 footer.colophon{margin-top:64px;padding-top:18px;border-top:2px solid var(--ink);font-size:13px;color:var(--muted);
 display:flex;flex-wrap:wrap;gap:8px 24px}
 .mono{font-family:var(--mono);font-size:12px;color:var(--faint)}
+/* 인쇄·PDF. 브라우저가 배경색을 지우면 와이어프레임과 칩이 빈 상자로 나온다.
+   뜻을 배경으로 전하는 것들만 골라 색을 지키게 한다. 종이는 늘 밝게 쓴다. */
+@media print{
+:root,:root[data-theme="dark"]{--paper:#FFF;--surface:#FFF;--surface-2:#EDF1F4;--ink:#14202C;--muted:#5B6B7C;
+--faint:#8494A3;--rule:#D7DEE5;--rule-soft:#E6EBEF;--seal:#9B2C22;--seal-bg:#F6E9E6;--slate:#35566E;
+--slate-bg:#E4ECF2;color-scheme:light}
+.wf,.wf i,.chip,.warn,.tag,.flag,.factbar,.card,.slot-copy{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.wrap{max-width:none;padding:0 0 24px}
+h2,h3,.page-head{break-after:avoid;page-break-after:avoid}
+ol.strip>li,.checklist li,.flag,.card,.sitemap>ul>li{break-inside:avoid;page-break-inside:avoid}
+section{break-before:auto;padding-top:34px}
+a{color:inherit;text-decoration:none}
+}
 </style>
 
 <div class="wrap">
