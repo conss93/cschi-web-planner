@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!--
+    파비콘. 페이지 하나를 위에서 아래로 쌓은 모양 — 헤더, 본문 한 덩이, 푸터.
+    이 도구가 하는 일이 그것이고, 캔버스에서 보는 카드와 같은 모양이다.
+    16px 로 줄어들어도 뭉치지 않도록 막대 셋만 두고 여백을 넉넉히 뒀다.
+    색은 액션 블루 하나만 쓴다.
+  -->
+  <rect width="32" height="32" rx="7" fill="#0066cc"/>
+  <g fill="#ffffff">
+    <rect x="6" y="6" width="20" height="4" rx="1.5"/>
+    <rect x="6" y="12" width="20" height="8" rx="1.5"/>
+    <rect x="6" y="22" width="12" height="4" rx="1.5"/>
+  </g>
+</svg>

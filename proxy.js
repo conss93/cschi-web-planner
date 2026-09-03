@@ -11,7 +11,9 @@ export async function proxy(request) {
     pathname.startsWith('/share/') ||
     pathname.startsWith('/login') ||
     pathname === '/api/login' ||
-    pathname === '/api/thumb'
+    pathname === '/api/thumb' ||
+    // 파비콘. 로그인 화면과 공유 링크에서도 떠야 하고 감출 것도 없다.
+    pathname === '/icon.svg'
   ) {
     return NextResponse.next();
   }
