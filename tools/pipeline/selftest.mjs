@@ -47,7 +47,10 @@ function makeFakeModel(catalog) {
     usage: { calls: 0 },
 
     async generate({ stage, role, shared, task, schema }) {
-      seen.push({ stage, role, shared, task });
+      seen.push({ stage, role, shared, task, schema });
+      if (stage === '마케팅·UX 검토') {
+        reviewSchemaAccepts = (v) => schema.safeParse(v).success;
+      }
 
       let value;
       if (stage === '브리프 정리') {
@@ -98,16 +101,27 @@ function makeFakeModel(catalog) {
               claim: '세무사가 직접 상담합니다',
               evidence: '브리프의 규모 항목 — 세무사 2명에 직원 3명이라 직접 응대가 가능합니다',
             },
-            proofGaps: [{ claim: '빠른 회신', need: '실제 평균 회신 시간' }],
+            proofGaps: [
+              { claim: '빠른 회신', need: '실제 평균 회신 시간' },
+              { claim: '기장 이관이 간단하다', need: '실제 이관 절차와 소요 일수' },
+            ],
             objections: [
               { doubt: '비용이 얼마나 나올지 모르겠다', answerAt: '상담 안내', how: '구간을 밝힙니다' },
+              { doubt: '지금 세무사를 바꿔도 되나', answerAt: '홈', how: '이관 절차를 세 단계로 보입니다' },
+              { doubt: '연락하면 영업당하는 것 아닌가', answerAt: '상담 안내', how: '상담 범위를 먼저 적습니다' },
             ],
           },
           ux: {
             entries: [{ from: '블로그', expects: '글을 쓴 사람이 누구인지', firstScreen: '세무사 실명과 얼굴' }],
-            flows: [{ name: '문의까지', steps: ['홈', '상담 안내'], friction: '전화번호가 푸터에만 있음' }],
-            dropoffs: [{ where: '홈 첫 화면', why: '무슨 일을 하는지 안 보임', fix: '한 줄로 먼저 답합니다' }],
-            mobile: ['전화 버튼이 한 손에 닿는 위치인지'],
+            flows: [
+              { name: '문의까지', steps: ['홈', '상담 안내'], friction: '전화번호가 푸터에만 있음' },
+              { name: '비용 확인', steps: ['홈', '상담 안내'], friction: '구간이 첫 화면에 안 보임' },
+            ],
+            dropoffs: [
+              { where: '홈 첫 화면', why: '무슨 일을 하는지 안 보임', fix: '한 줄로 먼저 답합니다' },
+              { where: '상담 안내 폼', why: '입력 항목이 많음', fix: '이름·연락처·내용만 받습니다' },
+            ],
+            mobile: ['전화 버튼이 한 손에 닿는 위치인지', '표로 짠 비용 구간이 가로로 밀리지 않는지'],
           },
         };
       } else if (stage.startsWith('페이지 구성')) {
@@ -141,6 +155,9 @@ function makeFakeModel(catalog) {
     },
   };
 }
+
+/** 검토 스키마가 이 값을 받아들이는지. 개수 제한이 실제로 걸리는지 본다. */
+let reviewSchemaAccepts = () => false;
 
 async function main() {
   const catalog = await loadCatalog();
@@ -207,6 +224,38 @@ async function main() {
       model.seen.findIndex((x) => x.stage === '사이트맵') &&
     model.seen.findIndex((x) => x.stage === '마케팅·UX 검토') <
       model.seen.findIndex((x) => x.stage.startsWith('페이지 구성')));
+
+  // 개수 상한·하한이 실제로 걸리는지. 지시로만 두면 지켜지지 않았다.
+  const reviewTask = model.seen.find((x) => x.stage === '마케팅·UX 검토');
+  const tooMany = {
+    ...plan.review,
+    ux: { ...plan.review.ux, mobile: ['가', '나', '다', '라', '마'] },
+  };
+  const tooFew = { ...plan.review, ux: { ...plan.review.ux, mobile: ['하나만'] } };
+  const none = { ...plan.review, ux: { ...plan.review.ux, mobile: [] } };
+
+  check('모바일 항목이 비면 통과하지 못함', !reviewSchemaAccepts(none));
+  check('모바일 항목이 하나뿐이어도 통과하지 못함', !reviewSchemaAccepts(tooFew));
+  check('모바일 항목이 다섯이면 통과하지 못함', !reviewSchemaAccepts(tooMany));
+  check('알맞은 개수는 통과함', reviewSchemaAccepts(plan.review));
+
+  check('망설임 여섯 개는 통과하지 못함', !reviewSchemaAccepts({
+    ...plan.review,
+    market: {
+      ...plan.review.market,
+      objections: Array.from({ length: 6 }, (_, i) => ({
+        doubt: `망설임 ${i}`, answerAt: '홈', how: '풉니다',
+      })),
+    },
+  }));
+
+  check('한 사실을 여러 목록에 나눠 쓰지 말라는 지시가 있음',
+    reviewTask.task.includes('가장 잘 맞는 목록 한 곳에만'));
+  check('모바일을 반드시 채우라는 지시가 있음', reviewTask.task.includes('반드시 채우세요'));
+  check('페이지 단계가 화면에 보이는 자리만 쓰게 지시함',
+    pageTasks.every((t) => t.includes('화면에 실제로 보이는 자리만')));
+  check('페이지 단계가 검토의 순서 지정을 따르게 지시함',
+    pageTasks.every((t) => t.includes('자리의 앞뒤 순서를 지정했으면')));
 
   // 검토가 없는 옛 기획서도 그대로 열려야 한다.
   const old = renderPlan({ ...plan, review: undefined });

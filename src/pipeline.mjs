@@ -208,27 +208,38 @@ ${JSON.stringify(strategy, null, 1)}`,
  * 이건 사이트맵을 그린 다음에야 볼 수 있고, 페이지를 짜기 전에 알아야 한다.
  * 그래서 이 자리에 둔다.
  */
+/**
+ * 개수를 스키마에 박는다. 지시로만 "3~5개" 라고 하면 지켜지지 않는다.
+ * 실제로 모바일 항목이 빈 배열로 와서 문서에서 통째로 빠진 적이 있고,
+ * 망설임은 5개라 했는데 6개가 왔다.
+ */
 const ReviewSchema = z.object({
   market: z.object({
     // 남들 다 하는 말. 여기 걸리면 문구를 다시 쓴다.
-    sameness: z.array(z.string()),
+    sameness: z.array(z.string()).min(3).max(5),
     wedge: z.object({ claim: z.string(), evidence: z.string() }),
     // 하고 싶은 주장인데 뒷받침할 자료가 없는 것. 받아야 할 자료가 된다.
-    proofGaps: z.array(z.object({ claim: z.string(), need: z.string() })),
+    proofGaps: z.array(z.object({ claim: z.string(), need: z.string() })).min(2).max(5),
     // 문의 직전의 망설임과 그것을 푸는 자리.
-    objections: z.array(
-      z.object({ doubt: z.string(), answerAt: z.string(), how: z.string() }),
-    ),
+    objections: z
+      .array(z.object({ doubt: z.string(), answerAt: z.string(), how: z.string() }))
+      .min(3)
+      .max(5),
   }),
   ux: z.object({
-    entries: z.array(
-      z.object({ from: z.string(), expects: z.string(), firstScreen: z.string() }),
-    ),
-    flows: z.array(
-      z.object({ name: z.string(), steps: z.array(z.string()), friction: z.string() }),
-    ),
-    dropoffs: z.array(z.object({ where: z.string(), why: z.string(), fix: z.string() })),
-    mobile: z.array(z.string()),
+    entries: z
+      .array(z.object({ from: z.string(), expects: z.string(), firstScreen: z.string() }))
+      .min(1)
+      .max(4),
+    flows: z
+      .array(z.object({ name: z.string(), steps: z.array(z.string()), friction: z.string() }))
+      .min(2)
+      .max(3),
+    dropoffs: z
+      .array(z.object({ where: z.string(), why: z.string(), fix: z.string() }))
+      .min(2)
+      .max(4),
+    mobile: z.array(z.string()).min(2).max(4),
   }),
 });
 
@@ -256,6 +267,18 @@ objections — 방문자가 문의 버튼 앞에서 머뭇거리는 이유 3~5�
 사이트맵의 어느 페이지에서 풀지, how 에 어떻게 푸는지 적으세요. 없는
 페이지를 지어내지 마세요.
 
+## 네 목록에 같은 이야기를 나눠 담지 마세요
+
+한 가지 사실(예: 드립커피 취급 여부)은 **가장 잘 맞는 목록 한 곳에만** 씁니다.
+
+- 방문자가 망설이는 질문이면 → objections
+- 우리가 하고 싶은 말인데 자료가 없으면 → proofGaps
+- 화면 구성 때문에 나가 버리는 자리면 → dropoffs
+
+같은 사실을 세 곳에 나눠 쓰면 읽는 사람에게는 같은 말 세 번입니다.
+다른 목록에서 이미 다룬 것은 되풀이하지 말고, 정말 다른 각도일 때만
+한 줄로 참조하세요.
+
 ## UI·UX 전문가로서
 
 entries — 유입 경로별로 봅니다. 브리프의 현재 채널을 먼저 보세요. 그 경로로
@@ -269,8 +292,9 @@ friction 에 그 흐름에서 걸리는 지점 하나.
 dropoffs — 방문자가 나가 버리는 지점 2~4개. where 는 페이지나 자리 이름,
 why 는 나가는 이유, fix 는 구성으로 막는 방법.
 
-mobile — 모바일에서 특히 다르게 봐야 할 것 2~4개. 화면이 좁아진다는
-일반론 말고, 이 사이트의 이 내용에서 무엇이 문제가 되는지 쓰세요.
+mobile — 모바일에서 특히 다르게 봐야 할 것 2~4개. **반드시 채우세요.**
+화면이 좁아진다는 일반론 말고, 이 사이트의 이 내용에서 무엇이 문제가
+되는지 쓰세요. 주력 고객이 어떤 기기로 들어오는지부터 보세요.
 
 전체에서, 어느 업종에나 해당하는 말은 쓰지 마세요. 브리프와 사이트맵에
 있는 사실에서만 끌어내세요.
@@ -319,6 +343,9 @@ ${(page.avoid ?? []).map((c) => `- ${c}`).join('\n') || '- (없음)'}
 
 규칙:
 - 섹션은 5~10개. 헤더로 시작해 푸터로 끝냅니다. 넘기지 마세요.
+- **화면에 실제로 보이는 자리만** 씁니다. 촬영 목록이나 일정 메모 같은
+  제작 관리용 항목은 섹션이 아닙니다. 그런 것은 note 에 적거나, 이 단계에서
+  빼고 제작 유의점 단계에 맡기세요. 섹션 하나는 곧 조립할 블록 하나입니다.
 - 같은 목적의 자리를 두 번 만들지 마세요.
 - blockId 는 위 목록에 있는 것만. 식스샵 기본 기능으로 처리할 섹션은 빈 문자열.
 - purpose 는 그 자리가 하는 일(예: "핵심 서비스 3종"). 블록 이름을 그대로 쓰지 마세요.
@@ -338,6 +365,11 @@ ${review ? `
 --- 마케팅·UX 검토 ---
 이 페이지에서 풀어야 할 망설임, 이 페이지가 걸린 이탈 지점, 유입별 첫 화면
 요구를 반영하세요. 다른 페이지 몫은 그 페이지에 맡기고 여기서는 다루지 않습니다.
+
+검토가 **자리의 앞뒤 순서를 지정했으면 그대로 따르세요.** "A 를 B 보다 위에",
+"C 를 지도 바로 다음에" 같은 지시가 flows 와 dropoffs 에 들어 있습니다.
+그 순서를 지키려고 검토를 먼저 돌린 것이므로, 어길 거면 note 에 이유를
+적으세요.
 
 ${JSON.stringify(review, null, 1)}` : ''}`,
   });
