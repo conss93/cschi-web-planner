@@ -10,6 +10,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { thumbUrl } from '../../../../lib/thumb.mjs';
+import { previewUrls } from '../../../../src/catalog.mjs';
 
 /** 마켓플레이스 그림. 못 불러오면 깨진 아이콘 대신 빈 칸으로 둔다. */
 export function Shot({ src, className = 'shot' }) {
@@ -121,17 +122,18 @@ export default function BlockPicker({ style, current, onPick, onClose }) {
                   </span>
                   {b.summary && <span className="blocksum">{b.summary}</span>}
                 </button>
-                {b.previewUrl && (
+                {previewUrls(b.previewUrl).map((url, i, all) => (
                   <a
+                    key={url}
                     className="preview"
-                    href={b.previewUrl}
+                    href={url}
                     target="_blank"
                     rel="noreferrer"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    실제 화면에서 보기
+                    {all.length > 1 ? `실제 화면에서 보기 ${i + 1}` : '실제 화면에서 보기'}
                   </a>
-                )}
+                ))}
               </li>
             ))}
           </ul>

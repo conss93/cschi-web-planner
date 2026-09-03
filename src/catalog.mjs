@@ -32,6 +32,31 @@ export function buildCatalog(raw) {
   return { blocks, byId, styles, categories, coverage, source: raw.source };
 }
 
+/**
+ * 화면에 쓸 블록 이름.
+ *
+ * 마켓플레이스 이름은 대개 "카드 배너 (Calm)" 처럼 계열이 이미 붙어 있다
+ * (계열 있는 블록 124개 중 123개). 뒤에 또 붙이면 "(Calm) (Calm)" 이 된다.
+ */
+export function blockLabel(name, style, officialPartner = false) {
+  const base = String(name ?? '').trim();
+  const withStyle = style && !base.includes(`(${style})`) ? `${base} (${style})` : base;
+  return officialPartner ? `${withStyle} ★` : withStyle;
+}
+
+/**
+ * 미리보기 주소 목록.
+ *
+ * 한 블록에 주소가 둘인 것이 19개 있다. 줄바꿈으로 이어 붙어 있어서 그대로
+ * 링크에 넣으면 깨진 주소가 된다.
+ */
+export function previewUrls(previewUrl) {
+  return String(previewUrl ?? '')
+    .split(/\s+/)
+    .map((u) => u.trim())
+    .filter((u) => u.startsWith('http'));
+}
+
 /** 한 블록을 한 줄로. 설명글은 고르는 근거라 살리되 길이는 제한한다. */
 function line(b) {
   const parts = [

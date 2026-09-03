@@ -11,11 +11,12 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { loadCatalog } from '../../src/catalog-file.mjs';
-import { renderBlockMenu, renderStyleTable } from '../../src/catalog.mjs';
+import { renderBlockMenu, renderStyleTable, blockLabel, previewUrls } from '../../src/catalog.mjs';
 import { runPipeline } from '../../src/pipeline.mjs';
 import { renderPlan } from '../../src/render.mjs';
 import { nextStage, pendingPageStages, assemble, findDuplicates, summarize } from '../../lib/runner.mjs';
 import { normalizePages } from '../../lib/edit.mjs';
+import { buildPack, packMarkdown, packCsv, IMAGE_CATEGORIES } from '../../src/pack.mjs';
 import { toBriefText, parseBriefText, missingRequired } from '../../lib/brief-form.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
@@ -324,8 +325,84 @@ async function main() {
   );
   check('한 페이지 자리 수에 상한이 있음', overflow.pages[0].sections.length === 40);
 
+  /* ── 콘텐츠 팩 ────────────────────────────────────────────── */
+
+  const banner = pick(catalog, '메인 배너');   // 그림이 있어야 차는 자리
+  // 블록 하나가 분류를 여럿 달고 있어서, 그림 분류가 하나도 없는 것을 골라야 한다.
+  const textOnly = catalog.blocks.find(
+    (b) => b.categories.length && !b.categories.some((c) => IMAGE_CATEGORIES.has(c)),
+  );
+
+  const packData = {
+    pages: [
+      { index: 1, title: '메뉴', slug: 'menu', sections: [
+        { purpose: '메뉴 묶음', blockId: textOnly.blockId, note: '',
+          copy: '이런 메뉴는 어떠세요\n(메뉴명 1 / 가격)\n※ 가격은 고객사 확정 자료를 받아 반영합니다.',
+          needsCustomTone: true },
+      ] },
+      { index: 0, title: '홈', slug: 'home', sections: [
+        { purpose: '메인 비주얼', blockId: banner.blockId, note: '사진 보강 필요',
+          copy: '조용히 앉아 커피 한 잔.\n[메뉴 보기]', needsCustomTone: false },
+        { purpose: '공지 게시판', blockId: '', note: '식스샵 기본 게시판으로 처리',
+          copy: '', needsCustomTone: false },
+      ] },
+    ],
+  };
+
+  const pack = buildPack(packData, catalog);
+
+  check('팩은 사이트맵 순서로 나옴', pack.pages.map((p) => p.index).join() === '0,1');
+  check('페이지마다 자리가 순서대로 매겨짐', pack.pages[0].sections.map((s) => s.at).join() === '1,2');
+  check('그림이 필요한 자리를 분류로 알아냄', pack.pages[0].sections[0].needsImage === true);
+  check('글만으로 되는 자리는 이미지 필요가 아님', pack.pages[1].sections[0].needsImage === false);
+  check('문구 속 [버튼] 표기를 뽑아냄', pack.pages[0].sections[0].buttons.join() === '메뉴 보기');
+  check('확정 자료를 기다리는 자리를 표시함', pack.pages[1].sections[0].pending === true);
+  check('다 정해진 자리는 미확정이 아님', pack.pages[0].sections[0].pending === false);
+  check('메모에 적힌 미확정도 잡아냄', buildPack(
+    { pages: [{ index: 0, title: 'x', sections: [{ purpose: 'y', blockId: textOnly.blockId, note: '확인 필요', copy: '' }] }] },
+    catalog,
+  ).pages[0].sections[0].pending === true);
+  check('블록 없는 자리도 남고 기본 기능으로 셈', pack.summary.basic === 1);
+  check('블록 종류는 둘', pack.summary.blocks === 2);
+  check('집계가 맞음', pack.summary.slots === 3 && pack.summary.images === 1 && pack.summary.tone === 1);
+
+  check('이름에 이미 붙은 계열을 또 붙이지 않음', blockLabel('카드 배너 (Calm)', 'Calm') === '카드 배너 (Calm)');
+  check('이름에 계열이 없으면 붙여 줌', blockLabel('띠배너', 'Fresh') === '띠배너 (Fresh)');
+  check('계열 없는 블록은 그대로', blockLabel('드롭 텍스트', null) === '드롭 텍스트');
+  check('공식 파트너 표시를 뒤에 붙임', blockLabel('카드 배너 (Calm)', 'Calm', true).endsWith('★'));
+  check('미리보기 주소가 둘이면 갈라 줌',
+    previewUrls('https://a.example\nhttps://b.example').length === 2);
+  check('미리보기 주소가 없으면 빈 목록', previewUrls(null).length === 0);
+
+  const twoUrls = catalog.blocks.filter((b) => previewUrls(b.previewUrl).length > 1);
+  check('실제 카탈로그에도 주소 둘인 블록이 있음', twoUrls.length > 0);
+  check('갈라 낸 주소가 전부 온전함',
+    twoUrls.flatMap((b) => previewUrls(b.previewUrl)).every((u) => !/\s/.test(u)));
+
+  const md = packMarkdown(pack, { company: '청새카페', style: 'Calm', assets: ['메뉴 사진'] });
+  check('마크다운에 상호가 들어감', md.includes('청새카페 콘텐츠 팩'));
+  check('마크다운에 자료 목록이 체크박스로 들어감', md.includes('- [ ] 메뉴 사진'));
+  check('마크다운에 blockId 가 들어감', md.includes(banner.blockId));
+  check('마크다운이 문구를 그대로 담음', md.includes('조용히 앉아 커피 한 잔.'));
+  check('마크다운이 규격을 지어내지 않는다고 밝힘', md.includes('마켓플레이스 자료에 없습니다'));
+  check('블록 없는 자리는 마켓플레이스 블록이 아니라고 적힘', md.includes('마켓플레이스 블록 아님'));
+
+  const csv = packCsv(pack);
+  const csvRows = csv.trimEnd().split('\r\n');
+  check('CSV 는 머리글 한 줄에 자리마다 한 줄', csvRows.length === 4);
+  check('CSV 는 엑셀이 한글을 읽도록 BOM 으로 시작', csv.startsWith('﻿'));
+  check('CSV 가 줄바꿈 든 문구를 따옴표로 감쌈', csv.includes('"조용히 앉아 커피 한 잔.\n[메뉴 보기]"'));
+
+  const quoted = packCsv({
+    pages: [{ title: '홈', sections: [
+      { at: 1, purpose: '따옴표 "안" 쓰기', copy: 'a,b', buttons: [], previews: [], label: '블록' },
+    ] }],
+  });
+  check('CSV 가 따옴표와 쉼표를 제대로 감쌈', quoted.includes('"따옴표 ""안"" 쓰기"') && quoted.includes('"a,b"'));
+
   const outDir = path.join(ROOT, 'out', 'selftest');
   await fs.mkdir(outDir, { recursive: true });
+  await fs.writeFile(path.join(outDir, 'pack.md'), md);
   await fs.writeFile(path.join(outDir, 'plan.html'), html);
 
   console.log(failures === 0 ? '\n전부 통과\n' : `\n실패 ${failures}건\n`);

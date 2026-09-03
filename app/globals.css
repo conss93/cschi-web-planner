@@ -215,6 +215,60 @@ legend {
   @keyframes pulse { 50% { opacity: .3; } }
 }
 
+/* ── 콘텐츠 팩 ───────────────────────────────────────────────── */
+
+.pack-section { margin-top: 48px; }
+.pack-section h2 { margin-top: 0; }
+
+.packbar {
+  display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
+  padding: 17px 24px; border: 1px solid var(--hairline); border-radius: var(--r-lg);
+  background: var(--pearl); margin-bottom: 24px;
+}
+.tally { display: flex; gap: 24px; flex-wrap: wrap; margin: 0; }
+.tally div { display: grid; gap: 2px; }
+.tally dt { font-size: 12px; color: var(--ink-48); letter-spacing: 0; }
+.tally dd { margin: 0; font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.packtools { margin-left: auto; display: flex; align-items: center; gap: 17px; }
+
+.checkoff { list-style: none; margin: 0; padding: 0; }
+.checkoff li {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: baseline;
+  padding: 8px 0; border-bottom: 1px solid var(--divider); font-size: 14px;
+}
+.checkoff input { accent-color: var(--blue); }
+.checkoff input:checked + span { color: var(--ink-48); text-decoration: line-through; }
+
+.packlist { list-style: none; margin: 0; padding: 0; }
+.packlist > li {
+  display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 17px;
+  padding: 17px 0; border-bottom: 1px solid var(--divider);
+}
+.packbody { display: grid; gap: 8px; min-width: 0; }
+.packhead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.packhead strong { font-size: 17px; font-weight: 600; }
+.mark {
+  font-size: 11px; letter-spacing: 0; padding: 2px 8px; border-radius: var(--r-pill);
+  border: 1px solid var(--hairline); color: var(--ink-48); white-space: nowrap;
+}
+.mark.img, .mark.tone, .mark.todo { border-color: var(--blue); color: var(--blue); }
+.mark.todo { background: color-mix(in srgb, var(--blue) 10%, transparent); }
+
+.packblock { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 14px; }
+.packblock .bname { color: var(--ink-80); }
+.packblock .bname.basic { color: var(--ink-48); }
+.packblock a { font-size: 12px; }
+.packmeta { margin: 0; font-size: 13px; color: var(--ink-48); max-width: 66ch; }
+
+.packcopy { display: flex; align-items: flex-start; gap: 12px; }
+.packcopy pre {
+  flex: 1 1 auto; margin: 0; min-width: 0;
+  font-family: var(--sans); font-size: 14px; line-height: 1.5;
+  white-space: pre-wrap; word-break: break-word;
+  padding: 12px 17px; background: var(--parchment); border-radius: var(--r-sm);
+}
+.icon.copy { width: auto; padding: 0 10px; height: 26px; flex: none; font-size: 12px; }
+
 /* ── 캔버스 ──────────────────────────────────────────────────── */
 
 .canvas-shell {

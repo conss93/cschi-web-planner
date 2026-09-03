@@ -8,6 +8,8 @@
  * 페이지 고르기로 같은 일을 한다.
  */
 
+import { blockLabel } from '../../../src/catalog.mjs';
+
 export default function SlotForm({
   section,
   at,
@@ -35,7 +37,11 @@ export default function SlotForm({
       <div className="blockline">
         <button type="button" className="blockchip" onClick={() => onPick(at)}>
           {section.blockId
-            ? `${section.blockName ?? section.blockId}${section.blockStyle ? ` (${section.blockStyle})` : ''}${section.officialPartner ? ' ★' : ''}`
+            ? blockLabel(
+                section.blockName ?? section.blockId,
+                section.blockStyle,
+                section.officialPartner,
+              )
             : '식스샵 기본 기능 — 블록 고르기'}
         </button>
         <label className="tonebox">

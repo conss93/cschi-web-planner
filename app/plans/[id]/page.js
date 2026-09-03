@@ -179,6 +179,7 @@ export default function PlanPage({ params }) {
         <nav>
           <a className="btn ghost" href="/">목록</a>
           {done && <a className="btn ghost" href={`/plans/${plan.id}/canvas`}>캔버스</a>}
+          {done && <a className="btn ghost" href={`/plans/${plan.id}/pack`}>콘텐츠 팩</a>}
           {done && <a className="btn ghost" href={`/plans/${plan.id}/edit`}>섹션 편집</a>}
           {done && (
             <a className="btn ghost" href={`/share/${plan.share_token}`} target="_blank" rel="noreferrer">
