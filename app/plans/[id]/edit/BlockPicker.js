@@ -9,6 +9,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { thumbUrl } from '../../../../lib/thumb.mjs';
 
 /** 마켓플레이스 그림. 못 불러오면 깨진 아이콘 대신 빈 칸으로 둔다. */
 export function Shot({ src, className = 'shot' }) {
@@ -18,7 +19,13 @@ export function Shot({ src, className = 'shot' }) {
   return (
     <span className={className}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} />
+      <img
+        src={thumbUrl(src)}
+        alt=""
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        onError={() => setFailed(true)}
+      />
     </span>
   );
 }

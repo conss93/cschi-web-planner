@@ -5,7 +5,14 @@ import { isSignedIn } from './lib/auth.mjs';
 export async function proxy(request) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith('/share/') || pathname.startsWith('/login') || pathname === '/api/login') {
+  // 공유 링크는 로그인 없이 열리므로, 그 화면이 쓰는 블록 그림도 열어 둬야 한다.
+  // 허용한 곳의 그림만 대신 받아 오므로 열어 둬도 새는 것이 없다.
+  if (
+    pathname.startsWith('/share/') ||
+    pathname.startsWith('/login') ||
+    pathname === '/api/login' ||
+    pathname === '/api/thumb'
+  ) {
     return NextResponse.next();
   }
 
