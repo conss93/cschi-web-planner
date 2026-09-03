@@ -42,17 +42,25 @@ export function buildPack(data, catalog) {
       const block = s.blockId ? catalog.byId.get(s.blockId) : null;
       const categories = block?.categories ?? [];
       const copy = String(s.copy ?? '');
+      // fill 이 없는 것은 이 기능이 생기기 전에 만든 기획서다.
+      const fill = s.fill ?? (s.blockId ? '마켓플레이스 블록' : '식스샵 기본 기능');
 
       return {
         at: at + 1,
         purpose: s.purpose ?? '',
+        fill,
         blockId: s.blockId ?? '',
         blockName: s.blockName ?? block?.name ?? '',
         blockStyle: s.blockStyle ?? block?.style ?? null,
         officialPartner: Boolean(s.officialPartner ?? block?.officialPartner),
-        label: s.blockId
-          ? blockLabel(s.blockName ?? block?.name, s.blockStyle ?? block?.style, Boolean(s.officialPartner ?? block?.officialPartner))
-          : '식스샵 기본 기능',
+        label:
+          fill === '마켓플레이스 블록'
+            ? blockLabel(
+                s.blockName ?? block?.name,
+                s.blockStyle ?? block?.style,
+                Boolean(s.officialPartner ?? block?.officialPartner),
+              )
+            : fill,
         previews: previewUrls(s.previewUrl ?? block?.previewUrl),
         thumbnail: s.thumbnail ?? block?.thumbnail ?? null,
         categories,
@@ -74,7 +82,8 @@ export function buildPack(data, catalog) {
       pages: pages.length,
       slots: all.length,
       blocks: new Set(all.filter((s) => s.blockId).map((s) => s.blockId)).size,
-      basic: all.filter((s) => !s.blockId).length,
+      ai: all.filter((s) => s.fill === 'AI 블록').length,
+      basic: all.filter((s) => s.fill === '식스샵 기본 기능').length,
       images: all.filter((s) => s.needsImage).length,
       tone: all.filter((s) => s.needsCustomTone).length,
       pending: all.filter((s) => s.pending).length,
@@ -103,6 +112,9 @@ export function packMarkdown(pack, { company, style, assets = [] } = {}) {
       (style ? ` · ${style} 계열` : ''),
   );
   out.push(
+    `AI 블록으로 만들 자리 ${n.ai} · 식스샵 기본 기능 ${n.basic}`,
+  );
+  out.push(
     `이미지 필요 ${n.images} · 톤 커스텀 ${n.tone} · 자료 미확정 ${n.pending} · 버튼 ${n.buttons}`,
   );
   out.push('');
@@ -129,7 +141,11 @@ export function packMarkdown(pack, { company, style, assets = [] } = {}) {
       out.push(`### ${String(s.at).padStart(2, '0')}. ${s.purpose}`);
       out.push('');
 
-      out.push(`- 블록: ${s.blockId ? s.label : '식스샵 기본 기능 — 마켓플레이스 블록 아님'}`);
+      out.push(
+        `- 채우는 법: ${s.label}` +
+          (s.fill === 'AI 블록' ? ' — 마켓플레이스에 맞는 블록이 없어 새로 만듭니다' : '') +
+          (s.fill === '식스샵 기본 기능' ? ' — 마켓플레이스 블록 아님' : ''),
+      );
       if (s.blockId) out.push(`- blockId: \`${s.blockId}\``);
       for (const url of s.previews) out.push(`- 미리보기: ${url}`);
       if (mark.length) out.push(`- 확인: ${mark.join(' · ')}`);
@@ -156,7 +172,7 @@ const cell = (v) => {
 
 export function packCsv(pack) {
   const head = [
-    '페이지', '순번', '자리', '블록', '계열', '공식파트너',
+    '페이지', '순번', '자리', '채우는법', '블록', '계열', '공식파트너',
     '이미지필요', '톤커스텀', '자료미확정', '버튼', '문구', '메모', 'blockId', '미리보기',
   ];
 
@@ -165,7 +181,8 @@ export function packCsv(pack) {
       page.title,
       s.at,
       s.purpose,
-      s.label,
+      s.fill,
+      s.fill === '마켓플레이스 블록' ? s.label : '',
       s.blockStyle ?? '',
       s.officialPartner ? 'Y' : '',
       s.needsImage ? 'Y' : '',

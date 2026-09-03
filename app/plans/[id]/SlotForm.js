@@ -35,15 +35,44 @@ export default function SlotForm({
       />
 
       <div className="blockline">
-        <button type="button" className="blockchip" onClick={() => onPick(at)}>
-          {section.blockId
-            ? blockLabel(
-                section.blockName ?? section.blockId,
-                section.blockStyle,
-                section.officialPartner,
-              )
-            : '식스샵 기본 기능 — 블록 고르기'}
-        </button>
+        <select
+          className="fill"
+          value={section.fill ?? (section.blockId ? '마켓플레이스 블록' : '식스샵 기본 기능')}
+          onChange={(e) =>
+            set({
+              fill: e.target.value,
+              // 블록을 안 쓰는 자리로 바꾸면 블록 정보를 비운다. 안 그러면
+              // 집계에 남아 실제와 어긋난다.
+              ...(e.target.value === '마켓플레이스 블록'
+                ? {}
+                : {
+                    blockId: '',
+                    blockName: null,
+                    blockStyle: null,
+                    officialPartner: false,
+                    thumbnail: null,
+                    previewUrl: null,
+                  }),
+            })
+          }
+          aria-label="이 자리를 무엇으로 채울지"
+        >
+          <option value="마켓플레이스 블록">마켓플레이스 블록</option>
+          <option value="AI 블록">AI 블록으로 제작</option>
+          <option value="식스샵 기본 기능">식스샵 기본 기능</option>
+        </select>
+
+        {(section.fill ?? (section.blockId ? '마켓플레이스 블록' : '')) === '마켓플레이스 블록' && (
+          <button type="button" className="blockchip" onClick={() => onPick(at)}>
+            {section.blockId
+              ? blockLabel(
+                  section.blockName ?? section.blockId,
+                  section.blockStyle,
+                  section.officialPartner,
+                )
+              : '블록 고르기'}
+          </button>
+        )}
         <label className="tonebox">
           <input
             type="checkbox"
@@ -57,7 +86,11 @@ export default function SlotForm({
       <textarea
         value={section.note ?? ''}
         onChange={(e) => set({ note: e.target.value })}
-        placeholder="제작 메모 — 왜 이 자리인지, 무엇을 조심할지"
+        placeholder={
+          section.fill === 'AI 블록'
+            ? 'AI 블록에 넣을 설명 — 무엇을 만들지, 좌우 배치, 이미지 비율, 모바일에서 어떻게 접히는지'
+            : '제작 메모 — 왜 이 자리인지, 무엇을 조심할지'
+        }
         rows={2}
       />
       <textarea

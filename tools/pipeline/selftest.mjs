@@ -128,13 +128,22 @@ function makeFakeModel(catalog) {
         const isHome = stage.includes('홈');
         value = {
           sections: [
-            { purpose: '전역 헤더', blockId: header.blockId, note: '로고와 메뉴', copy: '', needsCustomTone: false },
+            { purpose: '전역 헤더', fill: '마켓플레이스 블록', blockId: header.blockId,
+              note: '로고와 메뉴', copy: '', needsCustomTone: false },
             isHome
-              ? { purpose: '첫 화면', blockId: banner.blockId, note: '사무실 실사진', copy: '설명부터 다릅니다', needsCustomTone: false }
-              : { purpose: '상담 절차', blockId: FAKE_ID, note: '없는 블록이라 걸러져야 함', copy: '', needsCustomTone: true },
-            { purpose: '상담 문의', blockId: form.blockId, note: '동의 체크박스 필수', copy: '', needsCustomTone: false },
-            { purpose: '칼럼 목록', blockId: '', note: '식스샵 기본 게시판', copy: '', needsCustomTone: false },
-            { purpose: '푸터', blockId: footer.blockId, note: '사업자 정보', copy: '', needsCustomTone: false },
+              ? { purpose: '첫 화면', fill: '마켓플레이스 블록', blockId: banner.blockId,
+                  note: '사무실 실사진', copy: '설명부터 다릅니다', needsCustomTone: false }
+              : { purpose: '상담 절차', fill: '마켓플레이스 블록', blockId: FAKE_ID,
+                  note: '없는 블록이라 AI 블록으로 돌아가야 함', copy: '', needsCustomTone: true },
+            { purpose: '세무사 소개', fill: 'AI 블록', blockId: '',
+              note: '좌측에 얼굴 사진, 우측에 이름·약력 두 줄. 모바일에서는 사진이 위.',
+              copy: '', needsCustomTone: true },
+            { purpose: '상담 문의', fill: '마켓플레이스 블록', blockId: form.blockId,
+              note: '동의 체크박스 필수', copy: '', needsCustomTone: false },
+            { purpose: '칼럼 목록', fill: '식스샵 기본 기능', blockId: '',
+              note: '식스샵 기본 게시판', copy: '', needsCustomTone: false },
+            { purpose: '푸터', fill: '마켓플레이스 블록', blockId: footer.blockId,
+              note: '사업자 정보', copy: '', needsCustomTone: false },
           ],
         };
       } else if (stage === '기능과 유의점') {
@@ -192,8 +201,35 @@ async function main() {
   const ids = plan.pages.flatMap((p) => p.sections.map((s) => s.blockId)).filter(Boolean);
   check('남은 blockId 는 전부 실재함', ids.every((id) => catalog.byId.has(id)));
   check('블록 이름이 채워짐', plan.pages[0].sections[0].blockName?.length > 0);
-  check('식스샵 기본 기능 자리는 남음', plan.pages[0].sections.some((s) => !s.blockId));
-  check('블록 수 집계가 맞음', plan.counts.blocks === ids.length);
+  check('식스샵 기본 기능 자리는 남음',
+    plan.pages[0].sections.some((s) => s.fill === '식스샵 기본 기능'));
+  // 블록 "종류" 는 서로 다른 blockId 의 수다. 같은 헤더가 두 페이지에 있어도
+  // 만드는 일은 한 번이므로 한 종으로 센다. 배치 횟수는 따로 센다.
+  check('블록 종류 집계가 맞음', plan.counts.blocks === new Set(ids).size);
+  check('배치 횟수는 종류보다 많음', plan.counts.placements > plan.counts.blocks);
+  check('CLI 와 웹이 같은 방식으로 셈',
+    JSON.stringify(plan.counts) === JSON.stringify(summarize({ pages: plan.pages })));
+
+  /* ── 한 자리를 채우는 세 가지 길 ─────────────────────────── */
+
+  const slots = plan.pages.flatMap((p) => p.sections);
+  check('세 가지가 모두 쓰임',
+    new Set(slots.map((s) => s.fill)).size === 3);
+  check('마켓플레이스 블록만 blockId 를 가짐',
+    slots.every((s) => (s.fill === '마켓플레이스 블록') === Boolean(s.blockId)));
+
+  const ai = slots.filter((s) => s.fill === 'AI 블록');
+  check('AI 블록 자리가 남음', ai.length >= 1);
+  check('AI 블록에는 무엇을 만들지 적혀 있음', ai.every((s) => s.note.length > 10));
+  check('AI 블록은 블록 종류로 세지 않음',
+    plan.counts.blocks === new Set(ids).size);
+
+  // 없는 블록을 고른 자리는 지우지 않고 AI 블록으로 돌린다. 그 자리에 필요했던
+  // 내용까지 사라지면 안 되기 때문이다.
+  const turned = slots.find((s) => s.purpose === '상담 절차');
+  check('없는 블록을 고른 자리는 지우지 않고 AI 블록으로 돌림',
+    turned?.fill === 'AI 블록' && turned.blockId === '');
+  check('돌린 자리는 톤 손질이 필요한 것으로 표시됨', turned?.needsCustomTone === true);
 
   console.log('\n─── 화면 ───');
   const html = renderPlan(plan);
@@ -203,6 +239,8 @@ async function main() {
   check('확인할 질문이 실림', html.includes('주력 고객층은?'));
   check('페이지 수의 근거가 실림', html.includes('페이지를 이렇게 나눈 이유'));
   check('기술 검토 섹션이 있음', html.includes('기술 검토'));
+  check('AI 블록 자리가 문서에 따로 표시됨', html.includes('AI 블록으로 제작'));
+  check('AI 블록 표시가 무엇인지 문서가 설명함', html.includes('AI 블록으로 새로 만드는'));
 
   check('검토 섹션이 실림', html.includes('이 업종에서 이미 닳은 말'));
   check('닳은 표현이 그대로 나옴', html.includes('고객 만족을 최우선으로'));
@@ -407,8 +445,9 @@ async function main() {
   check('편집 결과는 사이트맵 순서로 되돌아옴', edited.pages.map((p) => p.index).join() === '0,1');
   check('사이트맵에 없는 페이지는 버림', edited.pages.every((p) => p.index !== 99));
   check('바꾼 자리 순서가 그대로 남음', edited.pages[0].sections[0].purpose === '본문');
-  check('없는 블록이 든 자리는 빠짐', edited.pages[1].sections.length === 0);
-  check('무엇이 빠졌는지 알려 줌', edited.problems.length === 1 && edited.problems[0].includes(FAKE_ID));
+  check('없는 블록을 넣으면 AI 블록으로 돌아감',
+    edited.pages[1].sections[0]?.fill === 'AI 블록' && !edited.pages[1].sections[0].blockId);
+  check('무엇이 어긋났는지 알려 줌', edited.problems.length === 1 && edited.problems[0].includes(FAKE_ID));
   check('블록 이름을 카탈로그에서 다시 붙임', edited.pages[0].sections[1].blockName === real.name);
   check('블록 없는 자리(식스샵 기본 기능)는 살아남음', edited.pages[0].sections[2].blockId === '');
   check('페이지 제목·주소는 사이트맵 값을 씀', edited.pages[0].slug === 'home');
@@ -425,6 +464,25 @@ async function main() {
     catalog,
   );
   check('한 페이지 자리 수에 상한이 있음', overflow.pages[0].sections.length === 40);
+
+  // 손으로 채우는 법을 바꾼 경우
+  const switched = normalizePages(
+    before,
+    [{ index: 0, sections: [
+      { purpose: '직원 소개', fill: 'AI 블록', blockId: real.blockId, note: '얼굴과 이름' },
+      { purpose: '게시판', fill: '식스샵 기본 기능', blockId: real.blockId, note: '' },
+      { purpose: '이상한 값', fill: '없는값', blockId: real.blockId, note: '' },
+    ] }],
+    catalog,
+  );
+  check('AI 블록으로 바꾸면 blockId 가 지워짐',
+    switched.pages[0].sections[0].fill === 'AI 블록' && switched.pages[0].sections[0].blockId === '');
+  check('기본 기능으로 바꿔도 blockId 가 지워짐',
+    switched.pages[0].sections[1].blockId === '');
+  check('모르는 값이 오면 blockId 를 보고 정함',
+    switched.pages[0].sections[2].fill === '마켓플레이스 블록');
+  check('블록을 안 쓰는 자리는 배치로 세지 않음',
+    summarize({ ...before, pages: switched.pages }).placements === 1);
 
   /* ── 콘텐츠 팩 ────────────────────────────────────────────── */
 
@@ -487,6 +545,28 @@ async function main() {
   check('마크다운이 문구를 그대로 담음', md.includes('조용히 앉아 커피 한 잔.'));
   check('마크다운이 규격을 지어내지 않는다고 밝힘', md.includes('마켓플레이스 자료에 없습니다'));
   check('블록 없는 자리는 마켓플레이스 블록이 아니라고 적힘', md.includes('마켓플레이스 블록 아님'));
+
+  // 콘텐츠 팩도 세 가지를 갈라 보여야 한다.
+  const threeWay = buildPack(
+    { pages: [{ index: 0, title: '홈', sections: [
+      { purpose: '배너', fill: '마켓플레이스 블록', blockId: banner.blockId, note: '', copy: '' },
+      { purpose: '직원 소개', fill: 'AI 블록', blockId: '', note: '좌측 사진 우측 이름', copy: '' },
+      { purpose: '게시판', fill: '식스샵 기본 기능', blockId: '', note: '', copy: '' },
+    ] }] },
+    catalog,
+  );
+  check('AI 블록 자리를 따로 셈', threeWay.summary.ai === 1 && threeWay.summary.basic === 1);
+  check('AI 블록은 마켓플레이스 블록 종류에 안 들어감', threeWay.summary.blocks === 1);
+  check('AI 블록 자리의 이름표가 AI 블록임', threeWay.pages[0].sections[1].label === 'AI 블록');
+
+  const threeMd = packMarkdown(threeWay, { company: '테스트' });
+  check('마크다운이 AI 블록으로 만든다고 밝힘', threeMd.includes('새로 만듭니다'));
+  check('마크다운에 AI 블록 자리 수가 나옴', threeMd.includes('AI 블록으로 만들 자리 1'));
+  check('AI 블록 자리에 무엇을 만들지가 실림', threeMd.includes('좌측 사진 우측 이름'));
+
+  const threeCsv = packCsv(threeWay);
+  check('CSV 에 채우는법 열이 있음', threeCsv.split('\r\n')[0].includes('채우는법'));
+  check('CSV 에 AI 블록이 적힘', threeCsv.includes('AI 블록'));
 
   const csv = packCsv(pack);
   const csvRows = csv.trimEnd().split('\r\n');

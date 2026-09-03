@@ -15,12 +15,13 @@ const fingerprint = (pages) =>
   JSON.stringify(
     pages.map((p) => [
       p.index,
-      (p.sections ?? []).map((s) => [s.blockId, s.purpose, s.note, s.copy, s.needsCustomTone]),
+      (p.sections ?? []).map((s) => [s.fill, s.blockId, s.purpose, s.note, s.copy, s.needsCustomTone]),
     ]),
   );
 
 export const EMPTY_SECTION = {
   purpose: '새 자리',
+  fill: '마켓플레이스 블록',
   blockId: '',
   note: '',
   copy: '',

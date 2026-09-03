@@ -7,23 +7,38 @@
 
 import { z } from 'zod';
 import { renderBlockMenu, renderStyleTable } from './catalog.mjs';
+import { summarize, workloadNote } from './counts.mjs';
 
 /* ── 모든 단계가 공유하는 역할과 규칙 ──────────────────────────────
    매 호출 동일한 문자열이어야 프롬프트 캐시가 산다. 여기에 날짜나 요청별
    값을 섞지 말 것. */
 
 const ROLE = `당신은 웹사이트 제작 외주를 맡은 기획자입니다.
-식스샵 프로로 사이트를 만들며, 화면은 마켓플레이스 블록을 조립해 구성합니다.
+식스샵 프로로 사이트를 만듭니다.
+
+한 자리를 채우는 길은 셋입니다.
+
+- **마켓플레이스 블록** — 주어진 목록에서 고릅니다. 가장 빠르고 결과가
+  예측됩니다. 웬만하면 이쪽입니다.
+- **AI 블록** — 식스샵의 AI 블록 생성 기능으로 새로 만듭니다. 원하는 구성을
+  글로 적으면 블록과 설정 패널까지 만들어 줍니다. 마땅한 블록이 없거나,
+  있는 블록을 억지로 전용해야 할 때 씁니다.
+- **식스샵 기본 기능** — 게시판 운영, 폼 응답 저장처럼 화면이 아니라 기능
+  자체가 필요한 자리.
 
 반드시 지킬 것:
 
-1. 블록은 주어진 목록에 있는 것만 씁니다. blockId 를 지어내지 마세요.
+1. 마켓플레이스 블록을 쓸 때는 주어진 목록에 있는 것만 씁니다.
+   blockId 를 지어내지 마세요.
 2. 블록 설명글은 전부 쇼핑몰 기준으로 쓰여 있습니다. "상품"을 그 업종의
    서비스로, "컬렉션"을 서비스 분류로 바꿔 읽으세요. 이름이 안 맞는다고
    넘기면 쓸 수 있는 블록을 놓칩니다.
-3. 게시판·블로그 목록을 만드는 블록은 마켓플레이스에 없습니다. 필요하면
-   식스샵 기본 게시판 기능으로 처리한다고 적고 blockId 는 비웁니다.
-4. 인물 소개 전용 블록도 없습니다. 카드 배너나 이미지+텍스트를 전용하세요.
+3. 억지로 전용하지 마세요. 인물 소개나 게시판 목록처럼 마켓플레이스에
+   맞는 블록이 없는 자리는, 엉뚱한 블록을 끌어다 쓰는 대신 AI 블록으로
+   만드는 편이 낫습니다. 다만 AI 블록은 매번 결과가 조금씩 달라 손이 더
+   가므로, 마땅한 블록이 있으면 그것을 먼저 씁니다.
+4. 게시판 글 목록을 실제로 운영하는 것은 화면이 아니라 기능입니다.
+   식스샵 기본 게시판으로 처리한다고 적으세요.
 5. 브리프에 없는 사실을 지어내지 마세요. 모르면 가정임을 밝히거나 확인할
    질문으로 남깁니다. 특히 수치, 경력, 실적은 함부로 쓰지 않습니다.
 6. 광고 규정이 있는 업종이면 성공률·보장·최고 같은 표현을 쓰지 않습니다.
@@ -312,10 +327,15 @@ ${JSON.stringify(architecture, null, 1)}`,
 
 /* ── 5단계: 페이지별 섹션 구성 ────────────────────────────────── */
 
+/** 한 자리를 무엇으로 채우는가. 셋 중 하나다. */
+export const FILL = ['마켓플레이스 블록', 'AI 블록', '식스샵 기본 기능'];
+
 const PageSchema = z.object({
   sections: z.array(
     z.object({
       purpose: z.string(),
+      fill: z.enum(FILL),
+      // 마켓플레이스 블록일 때만 채운다. 나머지는 빈 문자열.
       blockId: z.string(),
       note: z.string(),
       copy: z.string(),
@@ -342,6 +362,16 @@ ${(page.covers ?? []).map((c) => `- ${c}`).join('\n') || '- (지정 없음)'}
 ${(page.avoid ?? []).map((c) => `- ${c}`).join('\n') || '- (없음)'}
 
 규칙:
+- 자리마다 fill 로 무엇으로 채울지 고릅니다.
+  · "마켓플레이스 블록" — blockId 를 위 목록에서 고릅니다. 웬만하면 이쪽.
+  · "AI 블록" — 맞는 블록이 없어 새로 만들 자리. blockId 는 빈 문자열.
+    note 에 **무엇을 만들 것인지** 구체적으로 적으세요. 나중에 그대로
+    식스샵 AI 블록에 넣을 문장이 됩니다. 좌우 배치, 이미지 비율, 모바일에서
+    어떻게 접히는지까지 쓰면 결과가 정확해집니다.
+  · "식스샵 기본 기능" — 게시판 운영, 폼 응답 저장처럼 화면이 아니라 기능이
+    필요한 자리. blockId 는 빈 문자열.
+- AI 블록은 한 페이지에 2개를 넘기지 마세요. 매번 결과가 달라 손이 갑니다.
+  맞는 블록이 있는데도 AI 블록을 고르면 공정만 늘어납니다.
 - 섹션은 5~10개. 헤더로 시작해 푸터로 끝냅니다. 넘기지 마세요.
 - **화면에 실제로 보이는 자리만** 씁니다. 촬영 목록이나 일정 메모 같은
   제작 관리용 항목은 섹션이 아닙니다. 그런 것은 note 에 적거나, 이 단계에서
@@ -353,8 +383,9 @@ ${(page.avoid ?? []).map((c) => `- ${c}`).join('\n') || '- (없음)'}
 - copy 는 그 섹션에 들어갈 실제 문구 예시. 문구가 필요 없는 섹션은 빈 문자열.
   브리프에 없는 수치나 실적은 넣지 마세요.
   검토의 sameness 에 걸린 표현은 쓰지 마세요. 남들 다 하는 말이라 쓰나 마납니다.
-- needsCustomTone 은 그 블록이 ${strategy.style} 계열이 아니라서 색·여백을
-  맞추는 커스텀이 필요하면 true.
+- needsCustomTone 은 그 자리가 ${strategy.style} 계열과 색·여백을 맞추는
+  손질이 필요하면 true. 계열 밖 마켓플레이스 블록이 그렇고, AI 블록도
+  디자인 지침을 물려도 한 번은 맞춰 봐야 하므로 대개 true 입니다.
 
 --- 브리프 ---
 ${JSON.stringify(brief, null, 1)}
@@ -412,6 +443,10 @@ export async function stageAdvisories(model, { brief, strategy, pages, blockMenu
     p.sections.map((s) => `${p.title}: ${s.purpose}${s.needsCustomTone ? ' (톤 커스텀 필요)' : ''}`),
   );
 
+  // 작업량은 우리가 세어 문장으로 건넨다. 모델에게 세게 하면 본문과 어긋난다.
+  // 실제로 톤 커스텀 8종인데 "개별 조정 비용이 들지 않는다"고 쓴 적이 있다.
+  const workload = workloadNote(summarize({ pages }));
+
   return model.generate({
     stage: '기능과 유의점',
     role: ROLE,
@@ -426,7 +461,14 @@ production 은 제작 진행상 주의할 점 4~6개. mark 는 두세 글자 표
 쓰세요. 일반론은 빼십시오.
 
 assetsToCollect 는 고객사에서 받아야 할 자료 목록.
-budgetNote 는 예산이 맞는지, 초과 요인이 무엇인지 두세 문장.
+
+budgetNote 는 예산이 맞는지, 초과 요인이 무엇인지 두세 문장. 아래 작업량은
+이미 세어 둔 사실이니 **그대로 전제로 삼으세요.** 숫자를 다시 세지 말고,
+숫자와 어긋나는 말도 쓰지 마세요. 특히 색·여백을 손봐야 하는 자리가 있는데
+"개별 조정 비용이 들지 않는다"고 쓰면 문서 안에서 앞뒤가 맞지 않습니다.
+
+--- 이 구성의 작업량 (이미 센 값) ---
+${workload}
 
 --- 브리프 ---
 ${JSON.stringify(brief, null, 1)}
@@ -482,12 +524,38 @@ export function validate(pages, catalog) {
 
   for (const page of pages) {
     page.sections = page.sections.filter((s) => {
-      if (!s.blockId) return true; // 식스샵 기본 기능으로 처리하는 자리
-      const block = catalog.byId.get(s.blockId);
-      if (!block) {
-        problems.push(`${page.title} / ${s.purpose}: 없는 블록 ${s.blockId}`);
-        return false;
+      // fill 이 없는 것은 이 기능이 생기기 전에 만든 기획서다. blockId 로 읽는다.
+      s.fill ??= s.blockId ? '마켓플레이스 블록' : '식스샵 기본 기능';
+
+      if (s.fill !== '마켓플레이스 블록') {
+        // 블록을 안 쓰는 자리에 blockId 가 남아 있으면 집계가 틀어진다.
+        s.blockId = '';
+        s.blockName = null;
+        s.blockStyle = null;
+        s.officialPartner = false;
+        s.thumbnail = null;
+        s.previewUrl = null;
+        return true;
       }
+
+      const block = s.blockId ? catalog.byId.get(s.blockId) : null;
+      if (!block) {
+        // 마켓플레이스 블록이라 해 놓고 없는 것을 골랐다. 자리를 지우면 그
+        // 자리에 필요했던 내용까지 사라지므로, AI 블록으로 돌려 살려 둔다.
+        problems.push(
+          `${page.title} / ${s.purpose}: 없는 블록 ${s.blockId || '(비어 있음)'} — AI 블록으로 돌림`,
+        );
+        s.fill = 'AI 블록';
+        s.blockId = '';
+        s.blockName = null;
+        s.blockStyle = null;
+        s.officialPartner = false;
+        s.thumbnail = null;
+        s.previewUrl = null;
+        s.needsCustomTone = true;
+        return true;
+      }
+
       s.blockName = block.name;
       s.blockStyle = block.style;
       s.officialPartner = block.officialPartner;
@@ -545,10 +613,8 @@ export async function runPipeline({ model, catalog, briefText, onStage = () => {
     pages,
     advisories,
     problems,
-    counts: {
-      pages: pages.length,
-      blocks: pages.reduce((n, p) => n + p.sections.filter((s) => s.blockId).length, 0),
-      customTone: pages.reduce((n, p) => n + p.sections.filter((s) => s.needsCustomTone).length, 0),
-    },
+    // 세는 일은 counts.mjs 한 곳에서 한다. 여기서 따로 세면 웹 화면과
+    // 어긋난 숫자가 나온다.
+    counts: summarize({ pages }),
   };
 }

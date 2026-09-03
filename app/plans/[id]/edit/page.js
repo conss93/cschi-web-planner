@@ -113,6 +113,7 @@ export default function EditPage({ params }) {
           onClose={() => setPicking(null)}
           onPick={(block) => {
             p.patch(picking.page, picking.section, {
+              fill: block ? '마켓플레이스 블록' : '식스샵 기본 기능',
               blockId: block?.blockId ?? '',
               blockName: block?.name ?? null,
               blockStyle: block?.style ?? null,

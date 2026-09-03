@@ -31,8 +31,20 @@ const wireframe = (section) => {
   return `<span class="wf" data-shape="${s}" aria-hidden="true">${'<i></i>'.repeat(WF_PARTS[s])}</span>`;
 };
 
+/**
+ * 한 자리를 무엇으로 채우는지. 세 가지가 한눈에 갈려야 한다.
+ * fill 이 없는 것은 이 기능이 생기기 전에 만든 기획서다. blockId 로 읽는다.
+ */
 function chip(section) {
-  if (!section.blockId) return '<span class="chip basic"><span class="dot"></span>식스샵 기본 기능</span>';
+  const fill = section.fill ?? (section.blockId ? '마켓플레이스 블록' : '식스샵 기본 기능');
+
+  if (fill === 'AI 블록') {
+    return '<span class="chip ai"><span class="dot"></span>AI 블록으로 제작</span>';
+  }
+  if (fill !== '마켓플레이스 블록') {
+    return '<span class="chip basic"><span class="dot"></span>식스샵 기본 기능</span>';
+  }
+
   const cls = section.blockStyle ? 'chip' : 'chip community';
   const star = section.officialPartner ? ' ★' : '';
   return `<span class="${cls}"><span class="dot"></span>${esc(section.blockName)}${star}</span>`;
@@ -119,6 +131,7 @@ font-weight:500;border-bottom-color:var(--rule);white-space:nowrap}
 background:var(--slate-bg);color:var(--slate);white-space:nowrap}
 .chip.community{background:var(--surface-2);color:var(--muted)}
 .chip.basic{background:var(--seal-bg);color:var(--seal)}
+.chip.ai{background:var(--slate-bg);color:var(--slate);border:1px dashed var(--slate)}
 .chip .dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex:none}
 .warn{font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--seal);border:1px solid var(--seal);
 border-radius:2px;padding:1px 5px}
@@ -187,7 +200,7 @@ display:flex;flex-wrap:wrap;gap:8px 24px}
 :root,:root[data-theme="dark"]{--paper:#FFF;--surface:#FFF;--surface-2:#EDF1F4;--ink:#14202C;--muted:#5B6B7C;
 --faint:#8494A3;--rule:#D7DEE5;--rule-soft:#E6EBEF;--seal:#9B2C22;--seal-bg:#F6E9E6;--slate:#35566E;
 --slate-bg:#E4ECF2;color-scheme:light}
-.wf,.wf i,.chip,.warn,.tag,.flag,.factbar,.card,.slot-copy{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.wf,.wf i,.chip,.chip.ai,.warn,.tag,.flag,.factbar,.card,.slot-copy{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .wrap{max-width:none;padding:0 0 24px}
 h2,h3,.page-head{break-after:avoid;page-break-after:avoid}
 ol.strip>li,.checklist li,.flag,.card,.sitemap>ul>li{break-inside:avoid;page-break-inside:avoid}
@@ -317,8 +330,9 @@ ${review ? `<section>
 
 <section>
   <h2><span class="num">${review ? '05' : '04'}</span>페이지 구성</h2>
-  <p class="lead">각 줄이 하나의 블록입니다. ★는 식스샵 공식 파트너 블록,
-  회색 칩은 스타일 계열이 없는 커뮤니티 블록입니다.</p>
+  <p class="lead">각 줄이 하나의 자리입니다. ★는 식스샵 공식 파트너 블록,
+  회색 칩은 스타일 계열이 없는 커뮤니티 블록입니다.
+  점선 칩은 마땅한 블록이 없어 <strong>AI 블록으로 새로 만드는</strong> 자리입니다.</p>
   ${globalsBlock(plan.globals)}
   ${pages.map(pageBlock).join('')}
 </section>

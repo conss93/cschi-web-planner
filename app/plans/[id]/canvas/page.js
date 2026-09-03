@@ -322,6 +322,7 @@ export default function CanvasPage({ params }) {
           onClose={() => setPicking(false)}
           onPick={(block) => {
             p.patch(chosen.page, chosen.at, {
+              fill: block ? '마켓플레이스 블록' : '식스샵 기본 기능',
               blockId: block?.blockId ?? '',
               blockName: block?.name ?? null,
               blockStyle: block?.style ?? null,
@@ -367,7 +368,7 @@ function PageCard({ page, labels, chosen }) {
                 {s.needsCustomTone && <span className="tone">톤</span>}
               </div>
             )}
-            <Slab src={s.thumbnail} blockId={s.blockId} />
+            <Slab src={s.thumbnail} fill={s.fill} blockId={s.blockId} />
           </div>
         ))}
       </div>
@@ -375,14 +376,15 @@ function PageCard({ page, labels, chosen }) {
   );
 }
 
-function Slab({ src, blockId }) {
+function Slab({ src, fill, blockId }) {
   const [failed, setFailed] = useState(false);
   const url = thumbUrl(src);
+  const how = fill ?? (blockId ? '마켓플레이스 블록' : '식스샵 기본 기능');
 
   if (!url || failed) {
     return (
-      <div className="slab-blank">
-        {blockId ? '그림 없음' : '식스샵 기본 기능'}
+      <div className={how === 'AI 블록' ? 'slab-blank ai' : 'slab-blank'}>
+        {how === '마켓플레이스 블록' ? '그림 없음' : how}
       </div>
     );
   }
