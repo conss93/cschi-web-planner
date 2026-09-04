@@ -20,6 +20,8 @@ import { buildPack, packMarkdown, packCsv, IMAGE_CATEGORIES } from '../../src/pa
 import { guidelineMarkdown, checkContrast } from '../../src/guideline.mjs';
 import { contrast } from '../../src/color.mjs';
 import { splitGlobals } from '../../src/counts.mjs';
+import { themeChecklist, weightName, BUTTON_SHAPES, ANIMATIONS } from '../../src/theme.mjs';
+import { styleSpec, modifyPrompt } from '../../src/aiprompt.mjs';
 import { createModel } from '../../src/model.mjs';
 import { z } from 'zod';
 import { toBriefText, parseBriefText, missingRequired } from '../../lib/brief-form.mjs';
@@ -188,6 +190,8 @@ function makeFakeModel(catalog) {
             ],
             weights: [400, 700],
           },
+          buttonShape: '둥근 직사각형',
+          animation: '없음',
           rounded: { sm: 4, md: 8, lg: 16, pill: 9999 },
           spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 40, section: 72 },
           components: [
@@ -766,8 +770,21 @@ async function main() {
   const withPrompt = buildPack(promptData, catalog, { company: '청새세무법인' });
   const [, aiSlot, thinSlot] = withPrompt.pages[0].sections;
 
-  check('마켓플레이스 블록 자리에는 프롬프트가 없음',
+  check('마켓플레이스 블록 자리에는 생성 프롬프트가 없음',
     withPrompt.pages[0].sections[0].prompt === undefined);
+
+  // 마켓플레이스 자리는 넣은 뒤 AI 수정으로 맞춘다.
+  const market = withPrompt.pages[0].sections[0];
+  check('마켓플레이스 자리에 수정 프롬프트가 붙음', typeof market.modify === 'string');
+  check('수정은 기능을 건드리지 말라고 못박음',
+    market.modify.includes('구조와 기능은 그대로 둡니다'));
+  check('이미 넣은 문구는 두라고 함', market.modify.includes('문구와 사진은 건드리지 않습니다'));
+  check('수정 프롬프트에 기준이 통째로 들어감', market.modify.includes(gl.colors.hairline));
+  check('AI 블록 자리에는 수정 프롬프트가 없음', aiSlot.modify === undefined);
+  check('수정할 자리 수를 셈', withPrompt.summary.modify === 1);
+  check('문서용으로 기준을 뺀 부분도 따로 있음',
+    market.modifyBody.length < market.modify.length &&
+    !market.modifyBody.includes(gl.colors.hairline));
   check('AI 블록 자리에 프롬프트가 붙음', typeof aiSlot.prompt === 'string' && aiSlot.prompt.length > 0);
   check('프롬프트가 무엇을 만들지로 시작함', aiSlot.prompt.startsWith('세무사 소개 섹션을 만들어 주세요.'));
   check('프롬프트에 배치가 들어감', aiSlot.prompt.includes('왼쪽 사진 40%'));
@@ -834,11 +851,17 @@ async function main() {
   check('지침이 없으면 색 줄이 빠짐', !noGuideSlot.prompt.includes('- 색:'));
   check('지침이 없어도 배치는 남음', noGuideSlot.prompt.includes('왼쪽 사진 40%'));
   check('지침이 없다고 표시함', noGuide.summary.guideline === false);
+  check('지침이 없으면 수정 프롬프트도 없음',
+    noGuide.pages[0].sections[0].modify === undefined && noGuide.summary.modify === 0);
 
   const promptMd = packMarkdown(withPrompt, { company: '청새세무법인' });
   check('마크다운에 프롬프트가 실림', promptMd.includes('AI 블록 프롬프트'));
   check('마크다운이 스타일 참조를 일러 줌', promptMd.includes('스타일 참조에 디자인 지침'));
   check('마크다운이 얇은 프롬프트를 짚어 줌', promptMd.includes('넣기 전에 손보세요'));
+  check('마크다운에 공통 기준을 한 번만 실음',
+    (promptMd.match(/## AI 수정 공통 기준/g) ?? []).length === 1);
+  check('자리마다는 기준을 다시 싣지 않음',
+    promptMd.split(gl.colors.hairline).length - 1 === 1);
 
   const promptCsv = packCsv(withPrompt);
   check('CSV 에 AI프롬프트 열이 있음', promptCsv.split('\r\n')[0].endsWith('AI프롬프트'));
@@ -893,6 +916,58 @@ async function main() {
     (head.match(/^ {2}body:$/gm) ?? []).length === 1);
   check('앞서 적은 본문 값이 덮이지 않음', head.includes(`fontSize: ${g.typography.bodySize}px`));
   check('겹치지 않는 단계는 그대로 남음', head.includes('  caption:'));
+
+  /* ── 테마 설정에 넣을 값 ──────────────────────────────────── */
+
+  const th = themeChecklist(g);
+  // 지침과 같은 값을 식스샵 칸 이름으로 바꾼 것이다. 따로 만들지 않는다.
+  check('기본 구성은 바탕·글자·강조를 그대로 씀',
+    th.schemes[0].background === g.colors.canvas &&
+    th.schemes[0].text === g.colors.ink &&
+    th.schemes[0].accent === g.colors.primary);
+  check('올라온 면이 두 번째 구성이 됨', th.schemes[1].background === g.colors.surface);
+  check('강조 면은 강조색을 바탕으로 깖', th.schemes[2].background === g.colors.primary);
+  check('구성은 다섯 칸을 채우려 지어내지 않음', th.schemes.length <= 5);
+
+  // 바탕과 면이 같은 색이면 구성을 하나 더 둘 이유가 없다.
+  const flat = themeChecklist({ ...g, colors: { ...g.colors, surface: g.colors.canvas } });
+  check('같은 색이면 구성을 늘리지 않음', flat.schemes.length === th.schemes.length - 1);
+
+  // 식스샵은 굵기를 숫자가 아니라 이름으로 받는다.
+  check('굵기를 식스샵 이름으로 바꿈', weightName(400) === 'Regular' && weightName(700) === 'Bold');
+  check('100 단위가 아니면 가까운 쪽으로', weightName(450) === 'Medium');
+  check('범위를 벗어나도 하나로 떨어짐', weightName(1200) === 'Black' && weightName(0) === 'Thin');
+  check('본문 굵기가 이름으로 나옴', th.bodyFont.weightName === weightName(g.typography.bodyWeight));
+  check('제목 굵기는 본문과 다른 것으로 고름', th.headingFont.weight !== g.typography.bodyWeight);
+  check('기본 글자 크기를 그대로 넘김', th.baseFontSize === g.typography.bodySize);
+
+  check('버튼 모양은 식스샵이 주는 셋 중 하나', BUTTON_SHAPES.includes(th.buttonShape));
+  check('애니메이션도 셋 중 하나', ANIMATIONS.includes(th.animation));
+
+  // 테마에 칸이 없는 값은 밝혀 두어야 한다. 안 그러면 지침에 적혀 있으니
+  // 마켓플레이스 블록에도 다 걸리는 줄 알게 된다.
+  check('테마에 칸 없는 값을 따로 알려 줌', th.notInTheme.length > 0);
+  check('경계선이 그 목록에 있음', th.notInTheme.some((x) => x.includes(g.colors.hairline)));
+  check('여백 단계가 그 목록에 있음', th.notInTheme.some((x) => x.startsWith('여백 단계')));
+
+  /* ── AI 수정 프롬프트 ─────────────────────────────────────── */
+
+  // 수정에는 지침을 붙일 수 없다. 프롬프트가 기준을 통째로 져야 한다.
+  const modSpec = styleSpec(g).join('\n');
+  check('수정 기준에 경계선 색이 들어감', modSpec.includes(g.colors.hairline));
+  check('수정 기준에 행간·자간이 들어감',
+    modSpec.includes(`행간 ${g.typography.bodyLineHeight}`) &&
+    modSpec.includes(g.typography.bodyLetterSpacing));
+  check('수정 기준에 여백 단계가 들어감', modSpec.includes(`섹션 사이 ${g.spacing.section}px`));
+  check('수정 기준의 굵기는 이름과 숫자를 함께 적음', modSpec.includes('Regular(400)'));
+  check('효과 없음이면 넣지 말라고 적힘', modSpec.includes('나타나는 효과나 움직임은 넣지 않습니다'));
+
+  // 생성 쪽은 지침이 붙으니 금지 규칙을 줄인다. 수정 쪽은 줄이면 안 된다.
+  check('수정 기준은 금지 규칙을 다 실음',
+    g.donts.every((d) => modSpec.includes(d)));
+
+  const noSpecYet = styleSpec(null);
+  check('지침이 없으면 기준도 없음', noSpecYet.length === 0);
 
   // 설명에 콜론이 하나만 있어도 머리말이 깨진다.
   const colon = guidelineMarkdown({ ...g, description: '기준: 판단에 필요한 것만' }, {});

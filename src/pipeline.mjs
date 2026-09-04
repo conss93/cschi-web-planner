@@ -8,6 +8,7 @@
 import { z } from 'zod';
 import { renderBlockMenu, renderStyleTable } from './catalog.mjs';
 import { summarize, workloadNote } from './counts.mjs';
+import { BUTTON_SHAPES, ANIMATIONS } from './theme.mjs';
 
 /* ── 모든 단계가 공유하는 역할과 규칙 ──────────────────────────────
    매 호출 동일한 문자열이어야 프롬프트 캐시가 산다. 여기에 날짜나 요청별
@@ -678,6 +679,11 @@ const GuidelineSchema = z.object({
     lg: z.number(), xl: z.number(), section: z.number(),
   }),
 
+  // 식스샵 테마가 이 둘은 숫자가 아니라 정해진 몇 가지 중 하나로 받는다.
+  // 모서리 픽셀을 적어 봐야 버튼에는 넣을 칸이 없으므로 직접 고르게 한다.
+  buttonShape: z.enum(BUTTON_SHAPES),
+  animation: z.enum(ANIMATIONS),
+
   components: z.array(z.object({ name: z.string(), spec: z.string() })).min(4),
   dos: z.array(z.string()).min(4),
   donts: z.array(z.string()).min(5),
@@ -742,6 +748,18 @@ bodyLetterSpacing 은 "-0.01em" 이나 "0" 처럼 단위를 붙인 문자열입�
 
 각각 정해진 단계만 씁니다. 그 사이의 임의 숫자를 쓰지 않는 것이 통일감의
 대부분입니다. pill 은 9999 로 두세요.
+
+## 식스샵 테마가 정해진 것 중에서만 받는 두 가지
+
+buttonShape 와 animation 은 숫자나 자유 문장이 아니라 **주어진 것 중 하나**를
+고릅니다. 식스샵 테마 설정에 그 세 가지밖에 없기 때문입니다.
+
+- buttonShape — ${BUTTON_SHAPES.join(' / ')}
+  위에서 정한 모서리 값과 어긋나지 않게 고르세요. 모서리를 거의 주지 않기로
+  했으면 직사각형, 완전히 굴리기로 했으면 알약입니다.
+- animation — ${ANIMATIONS.join(' / ')}
+  차분한 인상을 노린다면 대개 "없음" 입니다. 움직임은 눈길을 끄는 대신
+  읽는 흐름을 끊습니다. 넣기로 했으면 왜 넣는지가 mood 와 맞아야 합니다.
 
 ## 구성 요소
 

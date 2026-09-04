@@ -122,6 +122,15 @@ export default function PackPage({ params }) {
         </p>
       )}
 
+      {n.modify > 0 && (
+        <p className="notice">
+          마켓플레이스 블록 {n.modify}자리는 넣은 뒤 <strong>AI 수정</strong>으로 지침에
+          맞춥니다. AI 수정에는 디자인 지침을 붙일 수 없어서 프롬프트가 기준을 통째로
+          싣고 있습니다 — 복사 버튼 하나로 그대로 붙여넣으면 됩니다.
+          {n.tone > 0 && ` 계열 밖 블록 ${n.tone}자리가 특히 어긋나 있으니 먼저 하세요.`}
+        </p>
+      )}
+
       {assets?.length > 0 && (
         <section className="pack-section">
           <h2>고객사에서 받아야 할 자료</h2>
@@ -190,6 +199,19 @@ export default function PackPage({ params }) {
                         <pre>{s.copy}</pre>
                         <Copy text={s.copy} />
                       </div>
+                    )}
+
+                    {s.modify && (
+                      <details className="aiprompt">
+                        <summary>
+                          AI 수정 프롬프트
+                          {s.needsCustomTone && <span className="mark tone">먼저</span>}
+                        </summary>
+                        <div className="packcopy">
+                          <pre>{s.modify}</pre>
+                          <Copy text={s.modify} label="프롬프트 복사" />
+                        </div>
+                      </details>
                     )}
 
                     {s.prompt && (

@@ -11,7 +11,7 @@
  */
 
 import { blockLabel, previewUrls } from './catalog.mjs';
-import { aiPrompt, aiSpec, hasSpec } from './aiprompt.mjs';
+import { aiPrompt, aiSpec, hasSpec, modifyPrompt, modifyBody, styleSpec } from './aiprompt.mjs';
 
 /** 이 분류의 블록은 그림이 있어야 자리가 찬다. */
 export const IMAGE_CATEGORIES = new Set([
@@ -100,6 +100,18 @@ export function buildPack(data, catalog, { company = '' } = {}) {
         note: String(s.note ?? ''),
       };
 
+      // 마켓플레이스 블록은 넣고 나서 AI 수정으로 지침에 맞춘다. 여기엔
+      // 지침을 붙일 수 없어 프롬프트가 기준을 통째로 지고 간다.
+      if (fill === '마켓플레이스 블록') {
+        if (!guideline) return row;
+        return {
+          ...row,
+          modify: modifyPrompt(row, { guideline, company, page }),
+          // 문서에서는 기준을 한 번만 싣고 자리마다 이 부분만 적는다.
+          modifyBody: modifyBody(row, { company, page }),
+        };
+      }
+
       if (fill !== 'AI 블록') return row;
 
       // AI 블록 자리에만 프롬프트가 붙는다. 색·모서리는 지침에서 오고,
@@ -118,6 +130,8 @@ export function buildPack(data, catalog, { company = '' } = {}) {
 
   return {
     pages,
+    // AI 수정 프롬프트가 자리마다 반복하는 부분. 문서에는 한 번만 싣는다.
+    styleSpec: styleSpec(guideline),
     summary: {
       pages: pages.length,
       slots: all.length,
@@ -126,6 +140,8 @@ export function buildPack(data, catalog, { company = '' } = {}) {
       // 배치 지시가 없어 목적·메모만으로 만든 프롬프트. 넣기 전에 손봐야 한다.
       thinPrompts: all.filter((s) => s.thinPrompt).length,
       guideline: Boolean(guideline),
+      // AI 수정을 돌릴 자리. 계열 밖 블록이 특히 급하다.
+      modify: all.filter((s) => s.modify).length,
       basic: all.filter((s) => s.fill === '식스샵 기본 기능').length,
       images: all.filter((s) => s.needsImage).length,
       tone: all.filter((s) => s.needsCustomTone).length,
@@ -176,6 +192,23 @@ export function packMarkdown(pack, { company, style, assets = [] } = {}) {
       '블록 미리보기를 열어 직접 확인하세요.',
   );
 
+  if (pack.styleSpec?.length) {
+    out.push('');
+    out.push('## AI 수정 공통 기준');
+    out.push('');
+    out.push(
+      '마켓플레이스 블록은 넣은 뒤 **AI 수정**으로 지침에 맞춥니다. ' +
+        'AI 수정에는 디자인 지침을 붙일 수 없어서, 아래 기준을 자리마다 ' +
+        '함께 붙여넣어야 합니다. 화면에서는 복사 버튼 하나에 이 기준까지 ' +
+        '들어 있으니 그대로 붙이면 됩니다.',
+    );
+    out.push('');
+    out.push('```');
+    out.push('지켜야 할 기준:');
+    out.push(...pack.styleSpec);
+    out.push('```');
+  }
+
   if (assets.length) {
     out.push('');
     out.push('## 고객사에서 받아야 할 자료');
@@ -215,6 +248,15 @@ export function packMarkdown(pack, { company, style, assets = [] } = {}) {
         out.push('```');
       }
 
+      if (s.modifyBody) {
+        out.push('');
+        out.push('**AI 수정 프롬프트** — 위 「공통 기준」을 뒤에 붙여서 넣습니다.');
+        out.push('');
+        out.push('```');
+        out.push(...s.modifyBody.split('\n'));
+        out.push('```');
+      }
+
       if (s.prompt) {
         out.push('');
         out.push(
@@ -243,6 +285,7 @@ export function packCsv(pack) {
   const head = [
     '페이지', '순번', '자리', '채우는법', '블록', '계열', '공식파트너',
     '이미지필요', '톤커스텀', '자료미확정', '버튼', '문구', '메모', 'blockId', '미리보기',
+    // 생성이든 수정이든 이 자리에 넣을 프롬프트 한 벌.
     'AI프롬프트',
   ];
 
@@ -263,7 +306,7 @@ export function packCsv(pack) {
       s.note,
       s.blockId,
       s.previews.join(' '),
-      s.prompt ?? '',
+      s.prompt ?? s.modify ?? '',
     ]),
   );
 

@@ -75,7 +75,7 @@ export default function GuidelinePage({ params }) {
 
   if (!body) return <div className="shell"><p style={{ paddingTop: 40 }}>불러오는 중…</p></div>;
 
-  const { guideline: g, company, contrastProblems, markdown } = body;
+  const { guideline: g, company, contrastProblems, markdown, theme, themeText } = body;
   const t = g.typography;
 
   return (
@@ -113,6 +113,62 @@ export default function GuidelinePage({ params }) {
         <p style={{ maxWidth: '66ch', color: 'var(--muted)' }}>{g.description}</p>
         <p style={{ color: 'var(--faint)', fontSize: 14 }}>{g.mood.join(' · ')}</p>
       </section>
+
+      {theme && (
+        <section className="pack-section">
+          <div className="page-bar">
+            <h2 style={{ margin: 0 }}>식스샵 테마 설정에 넣을 값</h2>
+            <Copy text={themeText} label="전체 복사" />
+          </div>
+          <p style={{ color: 'var(--muted)', maxWidth: '64ch' }}>
+            아래 지침과 <strong>같은 값</strong>을 설정 화면의 칸 이름으로 바꿔 놓은
+            것입니다. 여기에 넣으면 마켓플레이스 블록까지 한 번에 맞춰집니다.
+          </p>
+
+          <h3>색상 · 색상 구성 {theme.schemes.length}개</h3>
+          <ul className="plain-list">
+            {theme.schemes.map((s, i) => (
+              <li key={s.name}>
+                <strong>구성 {i + 1} · {s.name}</strong> — 배경 <code>{s.background}</code> /
+                {' '}글자 <code>{s.text}</code> / 강조 <code>{s.accent}</code>
+                <span style={{ color: 'var(--faint)' }}> — {s.use}</span>
+              </li>
+            ))}
+          </ul>
+
+          <h3>글자</h3>
+          <ul className="plain-list">
+            <li>기본 글자 크기 — <code>{theme.baseFontSize}px</code></li>
+            <li>
+              제목 글꼴 — {theme.headingFont.family} /{' '}
+              <code>{theme.headingFont.weightName}</code>
+            </li>
+            <li>
+              본문 글꼴 — {theme.bodyFont.family} / <code>{theme.bodyFont.weightName}</code>
+            </li>
+          </ul>
+
+          <h3>버튼 · 애니메이션</h3>
+          <ul className="plain-list">
+            <li>버튼 모양 — <code>{theme.buttonShape ?? '지침에 없음'}</code></li>
+            <li>애니메이션 유형 — <code>{theme.animation ?? '지침에 없음'}</code></li>
+          </ul>
+
+          {theme.notInTheme.length > 0 && (
+            <>
+              <h3>테마에 넣을 칸이 없는 값</h3>
+              <p style={{ color: 'var(--muted)', maxWidth: '64ch' }}>
+                아래는 설정 화면에 칸이 없습니다. 마켓플레이스 블록에는 자동으로
+                걸리지 않고, 콘텐츠 팩의 <strong>AI 수정 프롬프트</strong>가 자리마다
+                날라 줍니다.
+              </p>
+              <ul className="plain-list">
+                {theme.notInTheme.map((x) => <li key={x}>{x}</li>)}
+              </ul>
+            </>
+          )}
+        </section>
+      )}
 
       <section className="pack-section">
         <h2>색</h2>
